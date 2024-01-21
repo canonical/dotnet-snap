@@ -1,0 +1,42 @@
+name: dotnet
+base: core22
+version: '0.1'
+summary: Single-line elevator pitch for your amazing snap
+description: |
+  This is my-snap's description. You have a paragraph or two to tell the
+  most important story about your snap. Keep it under 100 words though,
+  we live in tweetspace and your description wants to look good in the snap
+  store.
+
+grade: devel # must be 'stable' to release into candidate/stable channels
+confinement: classic # use 'strict' once you have the right plugs and slots
+
+parts:
+  dotnet-installer:
+    plugin: dotnet
+    dotnet-build-configuration: Release
+    dotnet-self-contained-runtime-identifier: linux-x64
+    source: .
+    build-packages:
+      - dotnet-sdk-6.0
+    build-attributes:
+      - enable-patchelf
+    stage-packages:
+      - libicu70
+    prime:
+      - Dotnet.Installer.Console
+      - usr/*
+
+  dotnet-host:
+    plugin: nil
+    build-attributes:
+      - enable-patchelf
+    stage-packages:
+      - dotnet-hostfxr-6.0
+
+apps:
+  dotnet-installer:
+    command: Dotnet.Installer.Console
+    environment:
+      DOTNET_ROOT: $SNAP/usr/lib/dotnet
+      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu
