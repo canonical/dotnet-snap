@@ -9,6 +9,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dotnet.Installer.Console", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dotnet.Installer.Domain", "src\Dotnet.Installer.Domain\Dotnet.Installer.Domain.csproj", "{8E63FFB8-326C-4BF9-B3D9-032E9C7B99DC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "snap", "snap", "{EDDB911E-F406-4222-9229-215548C17A76}"
+	ProjectSection(SolutionItems) = preProject
+		snap\snapcraft.yaml = snap\snapcraft.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "hooks", "hooks", "{0CDB7334-6495-4660-80A9-EB89241FD28D}"
+	ProjectSection(SolutionItems) = preProject
+		snap\hooks\configure = snap\hooks\configure
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,5 +60,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{E19EBCA5-B58B-45F1-A23C-A35AAF25439C} = {13E05E09-CF21-458E-BBC7-51A2371C20A2}
 		{8E63FFB8-326C-4BF9-B3D9-032E9C7B99DC} = {13E05E09-CF21-458E-BBC7-51A2371C20A2}
+		{0CDB7334-6495-4660-80A9-EB89241FD28D} = {EDDB911E-F406-4222-9229-215548C17A76}
 	EndGlobalSection
 EndGlobal
