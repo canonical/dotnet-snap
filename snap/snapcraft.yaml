@@ -29,6 +29,7 @@ parts:
       - libicu70
     prime:
       - Dotnet.Installer.Console
+      - Scripts/*
       - usr/*
 
   dotnet-host:

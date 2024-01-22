@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -14,6 +14,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Dotnet.Installer.Domain\Dotnet.Installer.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Scripts/" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="Scripts/*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
