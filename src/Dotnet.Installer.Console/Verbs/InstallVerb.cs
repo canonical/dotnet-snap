@@ -49,59 +49,23 @@ public class InstallVerb
 
         if (Directory.Exists(_installPath))
         {
-            var response = await client.GetAsync("manifest.json");
+            var manifest = await GetManifest(client);
 
-            if (response.IsSuccessStatusCode)
+            if (manifest is null) return;
+            
+            var requestedVersion = DotnetVersion.Parse(version);
+            var requestedComponent = manifest.FirstOrDefault(c => 
+                c.Component.Equals(component, StringComparison.CurrentCultureIgnoreCase)
+                && c.Version == requestedVersion);
+
+            if (requestedComponent is null)
             {
-                var content = await response.Content.ReadFromJsonAsync<IEnumerable<RemoteItem>>();
-
-                if (content is not null)
-                {
-                    var requestedVersion = DotnetVersion.Parse(version);
-                    var requestedComponent = content.FirstOrDefault(c => 
-                        c.Component.Equals(component, StringComparison.CurrentCultureIgnoreCase)
-                        && c.Version == requestedVersion);
-
-                    if (requestedComponent is null)
-                    {
-                        System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
-                            component, version);
-                        return;
-                    }
-
-                    var fileName = requestedComponent.Url.Segments.Last();
-                    var filePath = Path.Combine(_installPath, fileName);
-
-                    var shouldDownload = true;
-                    // if (File.Exists(filePath))
-                    // {
-                    //     System.Console.WriteLine("File already exists, comparing hash...");
-
-                    //     var hashString = await GetFileHash(filePath);
-
-                    //     if (hashString.Equals(requestedComponent.Sha256))
-                    //     {
-                    //         System.Console.WriteLine("Hash matches!");
-                    //         shouldDownload = false;
-                    //     }
-                    //     else
-                    //     {
-                    //         System.Console.WriteLine("Hash does NOT match!");
-                    //         File.Delete(filePath);
-                    //     }
-                    // }
-
-                    if (shouldDownload) await DownloadFile(client, requestedComponent.Url, filePath);
-                    // var hash = await GetFileHash(filePath);
-                    // if (!hash.Equals(requestedComponent.Sha256, StringComparison.CurrentCultureIgnoreCase))
-                    // {
-                    //     System.Console.Error.WriteLine("ERROR: File hashes do not match.");
-                    //     return;
-                    // }
-
-                    await ExtractFile(filePath, _installPath);
-                }
+                System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
+                    component, version);
+                return;
             }
+
+            await ProcessComponent(manifest, requestedComponent, _installPath, client);
 
             return;
         }
@@ -109,12 +73,70 @@ public class InstallVerb
         System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", _installPath);
     }
 
-    // private async Task<string> GetFileHash(string filepath)
-    // {
-    //     using var readerStream = File.OpenRead(filepath);
-    //     var result = await SHA256.HashDataAsync(readerStream);
-    //     return Convert.ToHexString(result).ToLower();
-    // }
+    private async Task<IEnumerable<RemoteItem>?> GetManifest(HttpClient client)
+    {
+        var response = await client.GetAsync("manifest.json");
+
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadFromJsonAsync<IEnumerable<RemoteItem>>();
+
+            return content;
+        }
+
+        return default;
+    }
+
+    private async Task ProcessComponent(IEnumerable<RemoteItem> manifest, RemoteItem item, 
+        string installPath, HttpClient client)
+    {
+        var fileName = item.Url.Segments.Last();
+        var filePath = Path.Combine(installPath, fileName);
+
+        var shouldDownload = true;
+        if (File.Exists(filePath))
+        {
+            System.Console.WriteLine("File already exists, comparing hash...");
+
+            var hashString = await GetFileHash(filePath);
+
+            if (hashString.Equals(item.Sha256))
+            {
+                System.Console.WriteLine("Hash matches!");
+                shouldDownload = false;
+            }
+            else
+            {
+                System.Console.WriteLine("Hash does NOT match!");
+                File.Delete(filePath);
+            }
+        }
+
+        if (shouldDownload) await DownloadFile(client, item.Url, filePath);
+        var hash = await GetFileHash(filePath);
+        if (!hash.Equals(item.Sha256, StringComparison.CurrentCultureIgnoreCase))
+        {
+            System.Console.Error.WriteLine("ERROR: File hashes do not match.");
+            return;
+        }
+
+        await ExtractFile(filePath, installPath);
+
+        File.Delete(filePath);
+
+        foreach (var dependency in item.Dependencies)
+        {
+            var component = manifest.First(c => c.Key == dependency);
+            await ProcessComponent(manifest, component, installPath, client);
+        }
+    }
+
+    private async Task<string> GetFileHash(string filepath)
+    {
+        using var readerStream = File.OpenRead(filepath);
+        var result = await SHA256.HashDataAsync(readerStream);
+        return Convert.ToHexString(result).ToLower();
+    }
 
     private async Task DownloadFile(HttpClient client, Uri url, string destination)
     {
