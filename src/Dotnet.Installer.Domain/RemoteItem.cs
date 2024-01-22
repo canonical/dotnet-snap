@@ -17,4 +17,6 @@ public class RemoteItem
     public DotnetVersion Version { get; set; }
     
     public IEnumerable<string> Locations { get; set; }
+
+    public IEnumerable<string> Dependencies { get; set; }
 }

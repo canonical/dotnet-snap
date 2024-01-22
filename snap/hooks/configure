@@ -1,4 +1,6 @@
 #!/bin/sh -e
 
-mkdir -p "$SNAP_USER_COMMON"
-cp -RLp "$SNAP"/usr/lib/dotnet "$SNAP_USER_COMMON"
+if [ ! -d "$SNAP_COMMON" ]; then
+    mkdir -p "$SNAP_COMMON"
+fi
+cp -RLp "$SNAP"/usr/lib/dotnet "$SNAP_COMMON"

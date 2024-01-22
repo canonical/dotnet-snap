@@ -11,7 +11,7 @@ public class HttpClientBinder : BinderBase<HttpClient>
     {
         var client = new HttpClient
         {
-            BaseAddress = new Uri("http://162.213.32.182:8000/")
+            BaseAddress = new Uri("http://10.83.58.1:3000/")
         };
 
         return client;

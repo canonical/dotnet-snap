@@ -92,6 +92,12 @@ public class InstallVerb
                     // }
 
                     if (shouldDownload) await DownloadFile(client, requestedComponent.Url, filePath);
+                    // var hash = await GetFileHash(filePath);
+                    // if (!hash.Equals(requestedComponent.Sha256, StringComparison.CurrentCultureIgnoreCase))
+                    // {
+                    //     System.Console.Error.WriteLine("ERROR: File hashes do not match.");
+                    //     return;
+                    // }
 
                     await ExtractFile(filePath, _installPath);
                 }
@@ -113,8 +119,16 @@ public class InstallVerb
     private async Task DownloadFile(HttpClient client, Uri url, string destination)
     {
         await using var remoteFileStream = await client.GetStreamAsync(url);
-        await using var writerStream = File.OpenWrite(destination);
-        await remoteFileStream.CopyToAsync(writerStream);
+
+        try
+        {
+            await using var writerStream = File.OpenWrite(destination);
+            await remoteFileStream.CopyToAsync(writerStream);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            System.Console.Error.WriteLine("ERROR: Unauthorized access. Maybe run with sudo?");
+        }
     }
 
     private async Task ExtractFile(string filePath, string destinationDirectory)
