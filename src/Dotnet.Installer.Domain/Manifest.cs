@@ -7,7 +7,7 @@ namespace Dotnet.Installer.Domain;
 public static class Manifest
 {
     private readonly static string _localManifestPath;
-    private readonly static HttpClient _httpClient;
+    public static HttpClient HttpClient { get; private set; }
 
     static Manifest()
     {
@@ -15,7 +15,7 @@ public static class Manifest
             Environment.GetEnvironmentVariable("DOTNET_ROOT"),
             "manifest.json"
         );
-        _httpClient = new HttpClient
+        HttpClient = new HttpClient
         {
             // BaseAddress = new Uri("http://10.83.58.1:3000/")
             BaseAddress = new Uri("http://localhost:3000/")
@@ -51,7 +51,7 @@ public static class Manifest
 
     public static async Task<IEnumerable<Component>> LoadRemote(CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.GetAsync("manifest.json", cancellationToken);
+        var response = await HttpClient.GetAsync("manifest.json", cancellationToken);
 
         if (response.IsSuccessStatusCode)
         {

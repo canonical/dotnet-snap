@@ -1,6 +1,4 @@
 ﻿using System.CommandLine;
-using System.Net.Http.Json;
-using Dotnet.Installer.Console.Binders;
 using Dotnet.Installer.Domain;
 
 namespace Dotnet.Installer.Console.Verbs;
@@ -23,27 +21,19 @@ public class ListVerb
         );
         listVerb.AddOption(availableOption);
 
-        listVerb.SetHandler(Handle, availableOption, new HttpClientBinder());
+        listVerb.SetHandler(Handle, availableOption);
 
         _rootCommand.Add(listVerb);
     }
 
-    private async Task Handle(bool availableOptionValue, HttpClient httpClient)
+    private async Task Handle(bool availableOptionValue)
     {
         if (availableOptionValue)
         {
-            var response = await httpClient.GetAsync("manifest.json");
-            if (response.IsSuccessStatusCode)
+            var manifest = await Manifest.LoadRemote();
+            foreach (var component in manifest)
             {
-                var content = await response.Content.ReadFromJsonAsync<IEnumerable<RemoteItem>>();
-
-                if (content is not null)
-                {
-                    foreach (var version in content)
-                    {
-                        System.Console.WriteLine($"{version.Component}: {version.Version}");
-                    }
-                }
+                System.Console.WriteLine($"{component.Name}: {component.Version}");
             }
         }
     }
