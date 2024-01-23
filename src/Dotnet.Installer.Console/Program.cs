@@ -12,6 +12,8 @@ class Program
         // Verbs
         var installVerb = new InstallVerb(rootCommand);
         installVerb.Initialize();
+        var removeVerb = new RemoveVerb(rootCommand);
+        removeVerb.Initialize();
         var listVerb = new ListVerb(rootCommand);
         listVerb.Initialize();
 

@@ -78,6 +78,21 @@ public class Component
         }
     }
 
+    public async Task Uninstall(string dotnetRootPath)
+    {
+        if (Installation is not null)
+        {
+            foreach (var directory in Locations)
+            {
+                var fullPath = Path.Join(dotnetRootPath, directory);
+                Directory.Delete(fullPath, recursive: true);
+            }
+
+            Installation = null;
+            await Manifest.Remove(this);
+        }
+    }
+    
     private static async Task<string> GetFileHash(string filepath)
     {
         using var readerStream = File.OpenRead(filepath);
