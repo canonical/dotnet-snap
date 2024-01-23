@@ -4,3 +4,8 @@ if [ ! -d "$SNAP_COMMON" ]; then
     mkdir -p "$SNAP_COMMON"
 fi
 cp -RLp "$SNAP"/usr/lib/dotnet "$SNAP_COMMON"
+
+# Create an empty local manifest file if it doesn't yet exist.
+if [ ! -e "$SNAP_COMMON"/dotnet/manifest.json ]; then
+    echo "[ ]" > "$SNAP_COMMON"/dotnet/manifest.json
+fi
