@@ -1,7 +1,4 @@
 ﻿using System.CommandLine;
-using System.Diagnostics;
-using System.Net.Http.Json;
-using System.Security.Cryptography;
 using Dotnet.Installer.Domain;
 using Dotnet.Installer.Domain.Types;
 
