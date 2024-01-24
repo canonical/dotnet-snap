@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace Dotnet.Installer.Domain;
@@ -24,7 +24,7 @@ public static partial class Manifest
     public static async Task<IEnumerable<Component>> Load(CancellationToken cancellationToken = default)
     {
         var localManifest = await LoadLocal(cancellationToken);
-        var remoteManifest = await LoadRemote(cancellationToken);
+        var remoteManifest = await LoadRemote(cancellationToken: cancellationToken);
 
         return Merge(remoteManifest, localManifest);
     }
@@ -48,19 +48,24 @@ public static partial class Manifest
         return Array.Empty<Component>();
     }
 
-    public static async Task<IEnumerable<Component>> LoadRemote(CancellationToken cancellationToken = default)
+    public static async Task<IEnumerable<Component>> LoadRemote(bool latestOnly = true, CancellationToken cancellationToken = default)
     {
-        var response = await HttpClient.GetAsync("manifest.json", cancellationToken);
+        var content = new List<Component>();
+        var response = await HttpClient.GetAsync("latest.json", cancellationToken);
 
         if (response.IsSuccessStatusCode)
         {
-            var content = await response.Content.ReadFromJsonAsync<IEnumerable<Component>>(
+            var latest = await response.Content.ReadFromJsonAsync<IEnumerable<Component>>(
                 cancellationToken: cancellationToken);
-
-            return content ?? Array.Empty<Component>();
+            if (latest is not null) content.AddRange(latest);
         }
 
-        return Array.Empty<Component>();
+        if (!latestOnly)
+        {
+            // TODO: Implement archive manifest support
+        }
+
+        return content;
     }
 
     public static async Task Add(Component component, CancellationToken cancellationToken = default)
