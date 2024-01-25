@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using ConsoleTables;
 using Dotnet.Installer.Domain.Models;
 
 namespace Dotnet.Installer.Console.Verbs;
@@ -30,11 +31,18 @@ public class ListVerb
     {
         if (availableOptionValue)
         {
-            var manifest = await Manifest.LoadRemote();
+            var manifest = await Manifest.Load();
+            
+            var table = new ConsoleTable("Component", "Version", "Installed")
+                .Configure(c => c.EnableCount = false);
             foreach (var component in manifest)
             {
-                System.Console.WriteLine($"{component.Name}: {component.Version}");
+                table.AddRow(
+                    component.Name,
+                    component.Version,
+                    component.Installation is null ? "" : "Yes");
             }
+            table.Write(Format.Default);
         }
     }
 }
