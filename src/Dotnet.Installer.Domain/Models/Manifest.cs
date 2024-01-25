@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace Dotnet.Installer.Domain;
+namespace Dotnet.Installer.Domain.Models;
 
 public static partial class Manifest
 {
@@ -14,10 +14,13 @@ public static partial class Manifest
             Environment.GetEnvironmentVariable("DOTNET_ROOT"),
             "manifest.json"
         );
+
+        var serverUrl = Environment.GetEnvironmentVariable("SERVER_URL") 
+            ?? throw new ApplicationException("SERVER_URL environment variable is not defined.");
+        
         HttpClient = new HttpClient
         {
-            // BaseAddress = new Uri("http://10.83.58.1:3000/")
-            BaseAddress = new Uri("http://localhost:3000/")
+            BaseAddress = new Uri(serverUrl)
         };
     }
 

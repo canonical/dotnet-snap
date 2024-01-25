@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 
-namespace Dotnet.Installer.Domain;
+namespace Dotnet.Installer.Domain.Models;
 
 public static partial class Manifest
 {

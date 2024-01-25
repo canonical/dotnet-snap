@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Security.Cryptography;
 
-namespace Dotnet.Installer.Domain;
+namespace Dotnet.Installer.Domain.Models;
 
 public partial class Component
 {

@@ -1,5 +1,5 @@
 ﻿using System.CommandLine;
-using Dotnet.Installer.Domain;
+using Dotnet.Installer.Domain.Models;
 
 namespace Dotnet.Installer.Console.Verbs;
 

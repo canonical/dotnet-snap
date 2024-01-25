@@ -1,5 +1,5 @@
 ﻿using System.CommandLine;
-using Dotnet.Installer.Domain;
+using Dotnet.Installer.Domain.Models;
 using Dotnet.Installer.Domain.Types;
 
 namespace Dotnet.Installer.Console;

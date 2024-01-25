@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Dotnet.Installer.Domain.Types;
 
-namespace Dotnet.Installer.Domain;
+namespace Dotnet.Installer.Domain.Models;
 
 public partial class Component
 {
