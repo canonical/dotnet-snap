@@ -29,20 +29,26 @@ public class ListVerb
 
     private async Task Handle(bool availableOptionValue)
     {
+        IEnumerable<Component> manifest;
         if (availableOptionValue)
         {
-            var manifest = await Manifest.Load();
-            
-            var table = new ConsoleTable("Component", "Version", "Installed")
-                .Configure(c => c.EnableCount = false);
-            foreach (var component in manifest)
-            {
-                table.AddRow(
-                    component.Name,
-                    component.Version,
-                    component.Installation is null ? "" : "Yes");
-            }
-            table.Write(Format.Default);
+            manifest = await Manifest.Load();
         }
+        else
+        {
+            manifest = await Manifest.LoadLocal();
+        }
+
+        var table = new ConsoleTable("Component", "Version", "Installed")
+            .Configure(c => c.EnableCount = false);
+
+        foreach (var component in manifest)
+        {
+            table.AddRow(
+                component.Name,
+                component.Version,
+                component.Installation is null ? "" : "Yes");
+        }
+        table.Write(Format.Default);
     }
 }

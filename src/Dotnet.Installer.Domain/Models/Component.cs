@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Dotnet.Installer.Domain.Enums;
 using Dotnet.Installer.Domain.Types;
 
 namespace Dotnet.Installer.Domain.Models;
