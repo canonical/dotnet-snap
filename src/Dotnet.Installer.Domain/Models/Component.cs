@@ -15,6 +15,10 @@ public partial class Component
 
     [JsonConverter(typeof(DotnetVersionJsonConverter))]
     public required DotnetVersion Version { get; set; }
+
+    [JsonPropertyName("arch")]
+    [JsonConverter(typeof(StringToArchitectureJsonConverter))]
+    public required Architecture Architecture { get; set; }
     
     public required IEnumerable<string> Locations { get; set; }
 
