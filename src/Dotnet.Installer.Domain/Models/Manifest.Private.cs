@@ -1,10 +1,15 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Dotnet.Installer.Domain.Enums;
 
 namespace Dotnet.Installer.Domain.Models;
 
 public static partial class Manifest
 {
+    private readonly static Architecture _architecture;
+    private readonly static string _localManifestPath;
+    private readonly static HttpClient _httpClient;
+
     private static Task Save(IEnumerable<Component> components, CancellationToken cancellationToken = default)
     {
         using var sw = new StreamWriter(_localManifestPath, append: false, Encoding.UTF8);

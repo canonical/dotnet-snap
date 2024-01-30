@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Dotnet.Installer.Domain.Enums;
 using Dotnet.Installer.Domain.Types;
 
@@ -10,9 +10,7 @@ public class Component
 
     public required string Name { get; set; }
 
-    public required Uri Url { get; set; }
-
-    public required string Sha256 { get; set; }
+    public required Uri BaseUrl { get; set; }
 
     [JsonConverter(typeof(DotnetVersionJsonConverter))]
     public required DotnetVersion Version { get; set; }
@@ -21,7 +19,7 @@ public class Component
     [JsonConverter(typeof(StringToArchitectureJsonConverter))]
     public required Architecture Architecture { get; set; }
     
-    public required IEnumerable<string> Locations { get; set; }
+    public required IEnumerable<Package> Packages { get; set; }
 
     public required IEnumerable<string> Dependencies { get; set; }
 
@@ -31,39 +29,16 @@ public class Component
     {
         if (Installation is null)
         {
-            var fileName = Url.Segments.Last();
-            var filePath = Path.Combine(dotnetRootPath, fileName);
-
-            var shouldDownload = true;
-            if (File.Exists(filePath))
+            foreach (var package in Packages)
             {
-                Console.WriteLine("File already exists, comparing hash...");
+                var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{Architecture.ToString().ToLower()}.deb");
 
-                var hashString = await GetFileHash(filePath);
+                var filePath = await FileHandler.DownloadFile(debUrl, dotnetRootPath);
 
-                if (hashString.Equals(Sha256))
-                {
-                    Console.WriteLine("Hash matches!");
-                    shouldDownload = false;
-                }
-                else
-                {
-                    Console.WriteLine("Hash does NOT match!");
-                    File.Delete(filePath);
-                }
+                await FileHandler.ExtractDeb(filePath, dotnetRootPath);
+
+                File.Delete(filePath);
             }
-
-            if (shouldDownload) await DownloadFile(Manifest.HttpClient, Url, filePath);
-            var hash = await GetFileHash(filePath);
-            if (!hash.Equals(Sha256, StringComparison.CurrentCultureIgnoreCase))
-            {
-                Console.Error.WriteLine("ERROR: File hashes do not match.");
-                return;
-            }
-
-            await ExtractFile(filePath, dotnetRootPath);
-
-            File.Delete(filePath);
 
             // Register the installation of this component in the local manifest file
             await Manifest.Add(this);
@@ -85,11 +60,26 @@ public class Component
     {
         if (Installation is not null)
         {
-            foreach (var directory in Locations)
+            foreach (var package in Packages)
             {
-                var fullPath = Path.Join(dotnetRootPath, directory);
-                Directory.Delete(fullPath, recursive: true);
+                var registrationFileName = Path.Combine(dotnetRootPath, $"{package.Name}.files");
+
+                if (!File.Exists(registrationFileName))
+                {
+                    throw new ApplicationException("Registration file does not exist!");
+                }
+
+                var files = await File.ReadAllLinesAsync(registrationFileName);
+                foreach (var file in files)
+                {
+                    File.Delete(file);
+                }
+
+                File.Delete(registrationFileName);
             }
+
+            // Check for any empty directories
+            DirectoryHandler.RemoveEmptyDirectories(dotnetRootPath);
 
             Installation = null;
             await Manifest.Remove(this);
