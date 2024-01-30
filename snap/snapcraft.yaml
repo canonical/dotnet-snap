@@ -1,6 +1,6 @@
 name: dotnet
 base: core22
-version: 7.0.15
+version: 8.0.1
 summary: Single-line elevator pitch for your amazing snap
 description: |
   This is my-snap's description. You have a paragraph or two to tell the
@@ -11,6 +11,10 @@ description: |
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: classic # use 'strict' once you have the right plugs and slots
 
+package-repositories:
+  - type: apt
+    ppa: dotnet/dotnet8
+
 parts:
   dotnet-installer:
     plugin: dotnet
@@ -18,7 +22,7 @@ parts:
     dotnet-self-contained-runtime-identifier: linux-x64
     source: .
     build-packages:
-      - dotnet-sdk-7.0
+      - dotnet-sdk-8.0
     build-attributes:
       - enable-patchelf
     stage-packages:
@@ -35,17 +39,18 @@ parts:
     build-attributes:
       - enable-patchelf
     stage-packages:
-      - dotnet-hostfxr-7.0
+      - dotnet-hostfxr-8.0
   
   netstandard-targeting-pack:
     plugin: nil
     stage-packages:
-      - netstandard-targeting-pack-2.1-7.0
+      - netstandard-targeting-pack-2.1-8.0
 
 apps:
   dotnet:
     command: Scripts/dotnet-initiator.sh
     environment:
       DOTNET_ROOT: $SNAP_COMMON/dotnet
+      DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
       LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib/x86_64-linux-gnu
       SERVER_URL: http://10.83.58.1:3000/
