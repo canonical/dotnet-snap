@@ -1,10 +1,10 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using Dotnet.Installer.Domain.Enums;
 using Dotnet.Installer.Domain.Types;
 
 namespace Dotnet.Installer.Domain.Models;
 
-public partial class Component
+public class Component
 {
     public required string Key { get; set; }
 
