@@ -49,10 +49,18 @@ public class InstallVerb
 
             if (manifest is null) return;
             
-            var requestedVersion = DotnetVersion.Parse(version);
-            var requestedComponent = manifest.FirstOrDefault(c => 
-                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
-                && c.Version == requestedVersion);
+            var requestedComponent = default(Component);
+            switch (version)
+            {
+                case "latest":
+                    // TODO: Implement 'latest' support
+                    break;
+                default:
+                    requestedComponent = manifest.FirstOrDefault(c => 
+                        c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
+                        && c.Version == DotnetVersion.Parse(version));
+                    break;
+            }
 
             if (requestedComponent is null)
             {
