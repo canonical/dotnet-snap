@@ -6,7 +6,7 @@ namespace Dotnet.Installer.Console.Verbs;
 
 public class InstallVerb
 {
-    private readonly string? _dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+    private readonly string? _dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR");
     private readonly RootCommand _rootCommand;
 
     public InstallVerb(RootCommand rootCommand)

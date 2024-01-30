@@ -6,7 +6,7 @@ namespace Dotnet.Installer.Console;
 
 public class RemoveVerb
 {
-    private readonly string? _dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+    private readonly string? _dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR");
     private readonly RootCommand _rootCommand;
 
     public RemoveVerb(RootCommand rootCommand)

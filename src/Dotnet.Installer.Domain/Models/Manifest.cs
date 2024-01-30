@@ -8,21 +8,17 @@ namespace Dotnet.Installer.Domain.Models
 
     public static partial class Manifest
     {
-        private readonly static Architecture _architecture;
-        private readonly static string _localManifestPath;
-        public static HttpClient HttpClient { get; private set; }
-
         static Manifest()
         {
             _localManifestPath = Path.Join(
-                Environment.GetEnvironmentVariable("DOTNET_ROOT"),
+                Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR"),
                 "manifest.json"
             );
 
             var serverUrl = Environment.GetEnvironmentVariable("SERVER_URL")
                 ?? throw new ApplicationException("SERVER_URL environment variable is not defined.");
 
-            HttpClient = new HttpClient
+            _httpClient = new HttpClient
             {
                 BaseAddress = new Uri(serverUrl)
             };
@@ -68,7 +64,7 @@ namespace Dotnet.Installer.Domain.Models
         public static async Task<IEnumerable<Component>> LoadRemote(bool latestOnly = true, CancellationToken cancellationToken = default)
         {
             var content = new List<Component>();
-            var response = await HttpClient.GetAsync("latest.json", cancellationToken);
+            var response = await _httpClient.GetAsync("latest.json", cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
