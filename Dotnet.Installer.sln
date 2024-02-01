@@ -7,7 +7,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{13E05E09-CF2
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dotnet.Installer.Console", "src\Dotnet.Installer.Console\Dotnet.Installer.Console.csproj", "{E19EBCA5-B58B-45F1-A23C-A35AAF25439C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dotnet.Installer.Domain", "src\Dotnet.Installer.Domain\Dotnet.Installer.Domain.csproj", "{8E63FFB8-326C-4BF9-B3D9-032E9C7B99DC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dotnet.Installer.Core", "src\Dotnet.Installer.Core\Dotnet.Installer.Core.csproj", "{8E63FFB8-326C-4BF9-B3D9-032E9C7B99DC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "snap", "snap", "{EDDB911E-F406-4222-9229-215548C17A76}"
 	ProjectSection(SolutionItems) = preProject

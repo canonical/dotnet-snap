@@ -2,9 +2,9 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace Dotnet.Installer.Domain.Models
+namespace Dotnet.Installer.Core.Models
 {
-    using Dotnet.Installer.Domain.Enums;
+    using Dotnet.Installer.Core.Enums;
 
     public static partial class Manifest
     {

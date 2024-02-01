@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using Dotnet.Installer.Domain.Enums;
-using Dotnet.Installer.Domain.Types;
+using Dotnet.Installer.Core.Enums;
+using Dotnet.Installer.Core.Types;
 
-namespace Dotnet.Installer.Domain.Models;
+namespace Dotnet.Installer.Core.Models;
 
 public class Component
 {

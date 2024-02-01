@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using CliWrap;
 
-namespace Dotnet.Installer.Domain;
+namespace Dotnet.Installer.Core;
 
 public static class FileHandler
 {

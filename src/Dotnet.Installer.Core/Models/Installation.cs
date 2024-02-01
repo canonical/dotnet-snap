@@ -1,4 +1,4 @@
-﻿namespace Dotnet.Installer.Domain.Models;
+﻿namespace Dotnet.Installer.Core.Models;
 
 public class Installation
 {

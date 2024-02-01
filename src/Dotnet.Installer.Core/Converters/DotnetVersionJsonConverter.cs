@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Dotnet.Installer.Domain.Types;
+using Dotnet.Installer.Core.Types;
 
-namespace Dotnet.Installer.Domain;
+namespace Dotnet.Installer.Core;
 
 public class DotnetVersionJsonConverter : JsonConverter<DotnetVersion>
 {

@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Dotnet.Installer.Domain.Enums;
+using Dotnet.Installer.Core.Enums;
 
-namespace Dotnet.Installer.Domain;
+namespace Dotnet.Installer.Core;
 
 public class StringToArchitectureJsonConverter : JsonConverter<Architecture>
 {

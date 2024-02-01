@@ -1,6 +1,6 @@
 ﻿using System.CommandLine;
 using ConsoleTables;
-using Dotnet.Installer.Domain.Models;
+using Dotnet.Installer.Core.Models;
 
 namespace Dotnet.Installer.Console.Verbs;
 

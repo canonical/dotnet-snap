@@ -1,4 +1,4 @@
-﻿namespace Dotnet.Installer.Domain;
+﻿namespace Dotnet.Installer.Core;
 
 public class Package
 {

@@ -1,4 +1,4 @@
-﻿namespace Dotnet.Installer.Domain.Enums;
+﻿namespace Dotnet.Installer.Core.Enums;
 
 public enum Architecture
 {

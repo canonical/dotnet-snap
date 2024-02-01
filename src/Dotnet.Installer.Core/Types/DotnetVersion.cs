@@ -1,4 +1,4 @@
-﻿namespace Dotnet.Installer.Domain.Types;
+﻿namespace Dotnet.Installer.Core.Types;
 
 public class DotnetVersion : IEquatable<DotnetVersion>
 {

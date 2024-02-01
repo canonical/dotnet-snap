@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Dotnet.Installer.Domain\Dotnet.Installer.Domain.csproj" />
+    <ProjectReference Include="..\Dotnet.Installer.Core\Dotnet.Installer.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

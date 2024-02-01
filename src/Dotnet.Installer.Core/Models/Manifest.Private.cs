@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using System.Text.Json;
-using Dotnet.Installer.Domain.Enums;
+using Dotnet.Installer.Core.Enums;
 
-namespace Dotnet.Installer.Domain.Models;
+namespace Dotnet.Installer.Core.Models;
 
 public static partial class Manifest
 {
