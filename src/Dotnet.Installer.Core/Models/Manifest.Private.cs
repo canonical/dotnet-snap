@@ -1,12 +1,10 @@
 ﻿using System.Text;
 using System.Text.Json;
-using Dotnet.Installer.Core.Enums;
 
 namespace Dotnet.Installer.Core.Models;
 
 public static partial class Manifest
 {
-    private readonly static Architecture _architecture;
     private readonly static string _localManifestPath;
     private readonly static HttpClient _httpClient;
 

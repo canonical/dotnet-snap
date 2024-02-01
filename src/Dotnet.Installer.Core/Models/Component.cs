@@ -1,5 +1,5 @@
-﻿using System.Text.Json.Serialization;
-using Dotnet.Installer.Core.Enums;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Models;
@@ -14,10 +14,6 @@ public class Component
 
     [JsonConverter(typeof(DotnetVersionJsonConverter))]
     public required DotnetVersion Version { get; set; }
-
-    [JsonPropertyName("arch")]
-    [JsonConverter(typeof(StringToArchitectureJsonConverter))]
-    public required Architecture Architecture { get; set; }
     
     public required IEnumerable<Package> Packages { get; set; }
 
@@ -27,11 +23,19 @@ public class Component
 
     public async Task Install(string dotnetRootPath)
     {
+        // TODO: Double-check architectures from Architecture enum
+        var architecture = RuntimeInformation.OSArchitecture switch
+        {
+            Architecture.X64 => "amd64",
+            Architecture.Arm64 => "arm64",
+            _ => throw new InvalidOperationException("Unsupported architecture")
+        };
+
         if (Installation is null)
         {
             foreach (var package in Packages)
             {
-                var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{Architecture.ToString().ToLower()}.deb");
+                var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
                 var filePath = await FileHandler.DownloadFile(debUrl, dotnetRootPath);
 
