@@ -5,6 +5,11 @@ namespace Dotnet.Installer.Core.Models;
 
 public static partial class Manifest
 {
+    private static JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     static Manifest()
     {
         _localManifestPath = Path.Join(
@@ -35,17 +40,13 @@ public static partial class Manifest
         {
             using var fs = File.OpenRead(_localManifestPath);
             var result = await JsonSerializer.DeserializeAsync<IEnumerable<Component>>(
-                fs, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                },
-                cancellationToken
+                fs, _jsonSerializerOptions, cancellationToken
             );
 
-            return result ?? Array.Empty<Component>();
+            return result ?? [];
         }
 
-        return Array.Empty<Component>();
+        return [];
     }
 
     public static async Task<IEnumerable<Component>> LoadRemote(bool latestOnly = true, CancellationToken cancellationToken = default)

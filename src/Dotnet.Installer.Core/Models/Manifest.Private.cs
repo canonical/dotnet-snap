@@ -11,10 +11,7 @@ public static partial class Manifest
     private static Task Save(IEnumerable<Component> components, CancellationToken cancellationToken = default)
     {
         using var sw = new StreamWriter(_localManifestPath, append: false, Encoding.UTF8);
-        var content = JsonSerializer.Serialize(components, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+        var content = JsonSerializer.Serialize(components, _jsonSerializerOptions);
         var stringBuilder = new StringBuilder(content);
         return sw.WriteLineAsync(stringBuilder, cancellationToken);
     }
