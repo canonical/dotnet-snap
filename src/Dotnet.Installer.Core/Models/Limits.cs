@@ -18,8 +18,7 @@ public class Limits
     public static async Task<Limits> Load()
     {
         // Read limits file
-        var snapRoot = Environment.GetEnvironmentVariable("SNAP") ?? string.Empty;
-        var limitsFilePath = Path.Combine(snapRoot, "Configuration", "limits.json");
+        var limitsFilePath = Environment.GetEnvironmentVariable("LIMITS_PATH") ?? string.Empty;
 
         if (!File.Exists(limitsFilePath)) throw new ApplicationException("Limits file could not be found.");
         
