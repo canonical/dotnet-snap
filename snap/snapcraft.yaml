@@ -1,15 +1,19 @@
 name: dotnet
 base: core22
 version: 8.0.1
-summary: Single-line elevator pitch for your amazing snap
+summary: .NET CLI tools, SDK and runtime
 description: |
-  This is my-snap's description. You have a paragraph or two to tell the
-  most important story about your snap. Keep it under 100 words though,
-  we live in tweetspace and your description wants to look good in the snap
-  store.
+  .NET is the free, open-source, cross-platform framework for building modern
+  apps and powerful cloud services that work on Android, iOS, GNU/Linux, macOS
+  and Windows.
+  .
+  This Snap also includes a powerful installer tool that allows you to manage
+  your .NET installation and gives you the possibility to install as many
+  multiple versions of .NET side-by-side as you want, as well as receive
+  monthly security and feature updates whenever they become available.
 
 grade: devel # must be 'stable' to release into candidate/stable channels
-confinement: classic # use 'strict' once you have the right plugs and slots
+confinement: classic
 
 package-repositories:
   - type: apt
@@ -31,6 +35,7 @@ parts:
       - libssl3
     prime:
       - Dotnet.Installer.Console
+      - Configuration/*
       - Scripts/*
       - usr/*
 
@@ -53,4 +58,4 @@ apps:
       DOTNET_ROOT: $SNAP_COMMON/dotnet
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
       LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib/x86_64-linux-gnu
-      SERVER_URL: http://10.83.58.1:3000/
+      SERVER_URL: https://raw.githubusercontent.com/mateusrodrigues/pages-test/main/
