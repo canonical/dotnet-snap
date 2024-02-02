@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using Dotnet.Installer.Core.Types;
 
-namespace Dotnet.Installer.Core;
+namespace Dotnet.Installer.Core.Converters;
 
 public class DotnetVersionJsonConverter : JsonConverter<DotnetVersion>
 {

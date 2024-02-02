@@ -1,17 +1,19 @@
-﻿namespace Dotnet.Installer.Core.Types;
+﻿using System.Text.Json.Serialization;
+using Dotnet.Installer.Core.Converters;
 
-public class DotnetVersion : IEquatable<DotnetVersion>
+namespace Dotnet.Installer.Core.Types;
+
+[JsonConverter(typeof(DotnetVersionJsonConverter))]
+public partial class DotnetVersion(int major, int minor, int patch) : IEquatable<DotnetVersion>, IComparable<DotnetVersion>
 {
-    public int Major { get; set; }
-    public int Minor { get; set; }
-    public int Patch { get; set; }
+    public int Major { get; } = major;
+    public int Minor { get; } = minor;
+    public int Patch { get; } = patch;
 
-    public DotnetVersion(int major, int minor, int patch)
-    {
-        Major = major;
-        Minor = minor;
-        Patch = patch;
-    }
+    public bool IsRuntime => Patch < 100;
+    public bool IsSdk => !IsRuntime;
+
+    public int? FeatureBand => !IsSdk ? default(int?) : int.Parse($"{Patch.ToString()[..1]}00");
 
     public static DotnetVersion Parse(string version)
     {
@@ -30,36 +32,4 @@ public class DotnetVersion : IEquatable<DotnetVersion>
     {
         return $"{Major}.{Minor}.{Patch}";
     }
-
-    public override bool Equals(object? obj) => Equals(obj as DotnetVersion);
-
-    public bool Equals(DotnetVersion? other)
-    {
-        if (other is null) return false;
-
-        if (ReferenceEquals(this, other)) return true;
-
-        if (GetType() != other.GetType()) return false;
-
-        return (Major == other.Major) && (Minor == other.Minor) && (Patch == other.Patch);
-    }
-
-    public override int GetHashCode() => (Major, Minor, Patch).GetHashCode();
-
-    public static bool operator ==(DotnetVersion lhs, DotnetVersion rhs)
-    {
-        if (lhs is null)
-        {
-            if (rhs is null)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        return lhs.Equals(rhs);
-    }
-
-    public static bool operator !=(DotnetVersion lhs, DotnetVersion rhs) => !(lhs == rhs);
 }

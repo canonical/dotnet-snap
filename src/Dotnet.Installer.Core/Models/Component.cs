@@ -1,5 +1,4 @@
 ﻿using System.Runtime.InteropServices;
-using System.Text.Json.Serialization;
 using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Models;
@@ -11,8 +10,7 @@ public class Component
     public required string Name { get; set; }
 
     public required Uri BaseUrl { get; set; }
-
-    [JsonConverter(typeof(DotnetVersionJsonConverter))]
+    
     public required DotnetVersion Version { get; set; }
     
     public required IEnumerable<Package> Packages { get; set; }
@@ -20,6 +18,26 @@ public class Component
     public required IEnumerable<string> Dependencies { get; set; }
 
     public Installation? Installation { get; set; }
+
+    public async Task<bool> CanInstall()
+    {
+        var limits = await Limits.Load();
+
+        if (Version.IsRuntime)
+        {
+            return Version <= limits.Runtime;
+        }
+
+        if (Version.IsSdk)
+        {
+            var limitOnFeatureBand = limits.Sdk
+                .First(v => v.FeatureBand == Version.FeatureBand);
+
+            return Version <= limitOnFeatureBand;
+        }
+
+        return false;
+    }
 
     public async Task Install(string dotnetRootPath)
     {
@@ -30,6 +48,12 @@ public class Component
             Architecture.Arm64 => "arm64",
             _ => throw new InvalidOperationException("Unsupported architecture")
         };
+
+        if (!await CanInstall())
+        {
+            Console.WriteLine("The component {0} {1} cannot be installed.", Name, Version);
+            return;
+        }
 
         if (Installation is null)
         {
