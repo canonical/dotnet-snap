@@ -6,17 +6,12 @@ namespace Dotnet.Installer.Core.Models;
 public class Component
 {
     public required string Key { get; set; }
-
     public required string Name { get; set; }
-
+    public required string Description { get; set; }
     public required Uri BaseUrl { get; set; }
-    
     public required DotnetVersion Version { get; set; }
-    
     public required IEnumerable<Package> Packages { get; set; }
-
     public required IEnumerable<string> Dependencies { get; set; }
-
     public Installation? Installation { get; set; }
 
     public async Task<bool> CanInstall()
@@ -59,6 +54,8 @@ public class Component
         {
             foreach (var package in Packages)
             {
+                Console.WriteLine($"Installing {package.Name}");
+                
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
                 var filePath = await FileHandler.DownloadFile(debUrl, dotnetRootPath);

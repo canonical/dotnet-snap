@@ -39,12 +39,13 @@ public class ListVerb
             manifest = await Manifest.LoadLocal();
         }
 
-        var table = new ConsoleTable("Component", "Version", "Installed")
+        var table = new ConsoleTable("Name", "Component", "Version", "Installed")
             .Configure(c => c.EnableCount = false);
 
         foreach (var component in manifest)
         {
             table.AddRow(
+                component.Description,
                 component.Name,
                 component.Version,
                 component.Installation is null ? "" : "Yes");

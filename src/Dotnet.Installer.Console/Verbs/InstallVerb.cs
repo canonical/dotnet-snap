@@ -46,8 +46,6 @@ public class InstallVerb
         if (Directory.Exists(_dotnetRootPath))
         {
             var manifest = await Manifest.Load();
-
-            if (manifest is null) return;
             
             var requestedComponent = default(Component);
             switch (version)
