@@ -1,6 +1,6 @@
-﻿using System.CommandLine;
-using ConsoleTables;
-using Dotnet.Installer.Core.Models;
+﻿using Dotnet.Installer.Core.Models;
+using System.CommandLine;
+using Spectre.Console;
 
 namespace Dotnet.Installer.Console.Verbs;
 
@@ -24,27 +24,23 @@ public class ListVerb(RootCommand rootCommand)
 
     private async Task Handle(bool availableOptionValue)
     {
-        IEnumerable<Component> manifest;
-        if (availableOptionValue)
-        {
-            manifest = await Manifest.Load();
-        }
-        else
-        {
-            manifest = await Manifest.LoadLocal();
-        }
+        var manifest = availableOptionValue
+            ? await Manifest.Load()
+            : await Manifest.LoadLocal();
 
-        var table = new ConsoleTable("Name", "Component", "Version", "Installed")
-            .Configure(c => c.EnableCount = false);
+        var treeTitle = availableOptionValue ? "Available Components" : "Installed Components";
+        var tree = new Tree(treeTitle);
 
-        foreach (var component in manifest)
+        foreach (var item in manifest.GroupBy(c => c.Version.Major))
         {
-            table.AddRow(
-                component.Description,
-                component.Name,
-                component.Version,
-                component.Installation is null ? "" : "Yes");
+            var majorVersionNode = tree.AddNode($".NET {item.Key}");
+
+            foreach (var component in item)
+            {
+                majorVersionNode.AddNode($"{component.Description}: {component.Version}");
+            }
         }
-        table.Write(Format.Default);
+        
+        AnsiConsole.Write(tree);
     }
 }
