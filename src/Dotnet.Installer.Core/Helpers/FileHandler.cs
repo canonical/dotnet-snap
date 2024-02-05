@@ -1,13 +1,13 @@
 ﻿using System.Security.Cryptography;
 using CliWrap;
 
-namespace Dotnet.Installer.Core;
+namespace Dotnet.Installer.Core.Helpers;
 
 public static class FileHandler
 {
     public static async Task<string> GetFileHash(string filepath)
     {
-        using var readerStream = File.OpenRead(filepath);
+        await using var readerStream = File.OpenRead(filepath);
         var result = await SHA256.HashDataAsync(readerStream);
         return Convert.ToHexString(result).ToLower();
     }
@@ -27,7 +27,7 @@ public static class FileHandler
         }
         catch (UnauthorizedAccessException)
         {
-            Console.Error.WriteLine("ERROR: Unauthorized access. Maybe run with sudo?");
+            await Console.Error.WriteLineAsync("ERROR: Unauthorized access. Maybe run with sudo?");
         }
 
         return fileName;
@@ -50,7 +50,7 @@ public static class FileHandler
         Directory.Delete(scratchDirectory, recursive: true);
     }
 
-    public static async Task SavePackageContentToFile(IEnumerable<string> files, string installationDirectory, string packageName)
+    private static async Task SavePackageContentToFile(IEnumerable<string> files, string installationDirectory, string packageName)
     {
         var registrationFile = Path.Combine(installationDirectory, $"{packageName}.files");
         await File.WriteAllLinesAsync(registrationFile, files);

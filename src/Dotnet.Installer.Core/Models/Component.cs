@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Dotnet.Installer.Core.Helpers;
 using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Models;

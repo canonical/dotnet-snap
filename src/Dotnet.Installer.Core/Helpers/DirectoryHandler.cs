@@ -1,4 +1,4 @@
-﻿namespace Dotnet.Installer.Core;
+﻿namespace Dotnet.Installer.Core.Helpers;
 
 public static class DirectoryHandler
 {
@@ -30,11 +30,11 @@ public static class DirectoryHandler
         }
 
         // Copy subdirectories and their contents to the new location.
-        var subdirs = dir.GetDirectories();
-        foreach (var subdir in subdirs)
+        var subDirs = dir.GetDirectories();
+        foreach (var subDir in subDirs)
         {
-            var path = Path.Combine(destinationDirectory, subdir.Name);
-            result.AddRange(MoveDirectory(subdir.FullName, path));
+            var path = Path.Combine(destinationDirectory, subDir.Name);
+            result.AddRange(MoveDirectory(subDir.FullName, path));
         }
 
         return result;
@@ -63,7 +63,7 @@ public static class DirectoryHandler
         }
     }
 
-    public static bool IsDirectoryEmpty(string path)
+    private static bool IsDirectoryEmpty(string path)
     {
         return Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0;
     }

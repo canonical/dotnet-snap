@@ -2,17 +2,12 @@
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Types;
 
-namespace Dotnet.Installer.Console;
+namespace Dotnet.Installer.Console.Verbs;
 
-public class RemoveVerb
+public class RemoveVerb(RootCommand rootCommand)
 {
     private readonly string? _dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR");
-    private readonly RootCommand _rootCommand;
-
-    public RemoveVerb(RootCommand rootCommand)
-    {
-        _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
-    }
+    private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
 
     public void Initialize()
     {
@@ -37,7 +32,7 @@ public class RemoveVerb
     {
         if (_dotnetRootPath is null)
         {
-            System.Console.Error.WriteLine("Install path is empty");
+            await System.Console.Error.WriteLineAsync("Install path is empty");
             return;
         }
 
@@ -45,8 +40,6 @@ public class RemoveVerb
         {
             var manifest = await Manifest.LoadLocal();
 
-            if (manifest is null) return;
-            
             var requestedVersion = DotnetVersion.Parse(version);
             var requestedComponent = manifest.FirstOrDefault(c => 
                 c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)

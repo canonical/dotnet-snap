@@ -10,7 +10,7 @@ public class DotnetVersionJsonConverter : JsonConverter<DotnetVersion>
     {
         var value = reader.GetString();
 
-        return (value is not null) 
+        return (value is not null)
             ? DotnetVersion.Parse(value)
             : default;
     }

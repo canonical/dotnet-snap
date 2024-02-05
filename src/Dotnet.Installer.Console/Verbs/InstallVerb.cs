@@ -4,15 +4,10 @@ using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Console.Verbs;
 
-public class InstallVerb
+public class InstallVerb(RootCommand rootCommand)
 {
     private readonly string? _dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR");
-    private readonly RootCommand _rootCommand;
-
-    public InstallVerb(RootCommand rootCommand)
-    {
-        _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
-    }
+    private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
 
     public void Initialize()
     {

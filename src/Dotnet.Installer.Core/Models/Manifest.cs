@@ -5,14 +5,14 @@ namespace Dotnet.Installer.Core.Models;
 
 public static partial class Manifest
 {
-    private static JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
     static Manifest()
     {
-        _localManifestPath = Path.Join(
+        LocalManifestPath = Path.Join(
             Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR"),
             "manifest.json"
         );
@@ -20,7 +20,7 @@ public static partial class Manifest
         var serverUrl = Environment.GetEnvironmentVariable("SERVER_URL")
             ?? throw new ApplicationException("SERVER_URL environment variable is not defined.");
 
-        _httpClient = new HttpClient
+        HttpClient = new HttpClient
         {
             BaseAddress = new Uri(serverUrl)
         };
@@ -36,23 +36,20 @@ public static partial class Manifest
 
     public static async Task<IEnumerable<Component>> LoadLocal(CancellationToken cancellationToken = default)
     {
-        if (File.Exists(_localManifestPath))
-        {
-            using var fs = File.OpenRead(_localManifestPath);
-            var result = await JsonSerializer.DeserializeAsync<IEnumerable<Component>>(
-                fs, _jsonSerializerOptions, cancellationToken
-            );
+        if (!File.Exists(LocalManifestPath)) return [];
 
-            return result ?? [];
-        }
+        await using var fs = File.OpenRead(LocalManifestPath);
+        var result = await JsonSerializer.DeserializeAsync<IEnumerable<Component>>(
+            fs, JsonSerializerOptions, cancellationToken
+        );
 
-        return [];
+        return result ?? [];
     }
 
     public static async Task<IEnumerable<Component>> LoadRemote(bool latestOnly = true, CancellationToken cancellationToken = default)
     {
         var content = new List<Component>();
-        var response = await _httpClient.GetAsync("latest.json", cancellationToken);
+        var response = await HttpClient.GetAsync("latest.json", cancellationToken);
 
         if (response.IsSuccessStatusCode)
         {

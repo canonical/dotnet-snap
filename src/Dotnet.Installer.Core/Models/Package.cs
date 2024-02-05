@@ -1,4 +1,4 @@
-﻿namespace Dotnet.Installer.Core;
+﻿namespace Dotnet.Installer.Core.Models;
 
 public class Package
 {

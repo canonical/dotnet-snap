@@ -5,15 +5,15 @@ namespace Dotnet.Installer.Core.Models;
 
 public static partial class Manifest
 {
-    private readonly static string _localManifestPath;
-    private readonly static HttpClient _httpClient;
+    private static readonly string LocalManifestPath;
+    private static readonly HttpClient HttpClient;
 
-    private static Task Save(IEnumerable<Component> components, CancellationToken cancellationToken = default)
+    private static async Task Save(IEnumerable<Component> components, CancellationToken cancellationToken = default)
     {
-        using var sw = new StreamWriter(_localManifestPath, append: false, Encoding.UTF8);
-        var content = JsonSerializer.Serialize(components, _jsonSerializerOptions);
+        await using var sw = new StreamWriter(LocalManifestPath, append: false, Encoding.UTF8);
+        var content = JsonSerializer.Serialize(components, JsonSerializerOptions);
         var stringBuilder = new StringBuilder(content);
-        return sw.WriteLineAsync(stringBuilder, cancellationToken);
+        await sw.WriteLineAsync(stringBuilder, cancellationToken);
     }
 
     private static IEnumerable<Component> Merge(IEnumerable<Component> remoteComponents,
@@ -24,7 +24,7 @@ public static partial class Manifest
 
         foreach (var localComponent in localComponents)
         {
-            if (!result.Any(c => c.Key == localComponent.Key))
+            if (result.All(c => c.Key != localComponent.Key))
             {
                 result.Add(localComponent);
             }

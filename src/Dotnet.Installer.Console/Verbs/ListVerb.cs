@@ -4,14 +4,9 @@ using Dotnet.Installer.Core.Models;
 
 namespace Dotnet.Installer.Console.Verbs;
 
-public class ListVerb
+public class ListVerb(RootCommand rootCommand)
 {
-    private readonly RootCommand _rootCommand;
-
-    public ListVerb(RootCommand rootCommand)
-    {
-        _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
-    }
+    private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
 
     public void Initialize()
     {
