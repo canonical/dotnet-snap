@@ -1,5 +1,6 @@
 ﻿using Dotnet.Installer.Core.Models;
 using System.CommandLine;
+using System.Text;
 using Spectre.Console;
 
 namespace Dotnet.Installer.Console.Verbs;
@@ -37,7 +38,15 @@ public class ListVerb(RootCommand rootCommand)
 
             foreach (var component in item)
             {
-                majorVersionNode.AddNode($"{component.Description}: {component.Version}");
+                var stringBuilder = new StringBuilder();
+
+                stringBuilder.Append($"{component.Description}: {component.Version}");
+                if (component.Installation is not null)
+                {
+                    stringBuilder.Append(" [bold green]Installed :check_mark_button:[/]");
+                }
+                
+                majorVersionNode.AddNode(stringBuilder.ToString());
             }
         }
         
