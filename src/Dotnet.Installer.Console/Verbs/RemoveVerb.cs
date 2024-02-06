@@ -6,7 +6,6 @@ namespace Dotnet.Installer.Console.Verbs;
 
 public class RemoveVerb(RootCommand rootCommand)
 {
-    private readonly string? _dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR");
     private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
 
     public void Initialize()
@@ -28,20 +27,14 @@ public class RemoveVerb(RootCommand rootCommand)
         _rootCommand.Add(removeVerb);
     }
 
-    private async Task Handle(string component, string version)
+    private static async Task Handle(string component, string version)
     {
-        if (_dotnetRootPath is null)
+        if (Directory.Exists(Manifest.DotnetInstallLocation))
         {
-            await System.Console.Error.WriteLineAsync("Install path is empty");
-            return;
-        }
-
-        if (Directory.Exists(_dotnetRootPath))
-        {
-            var manifest = await Manifest.LoadLocal();
+            var manifest = await Manifest.Initialize();
 
             var requestedVersion = DotnetVersion.Parse(version);
-            var requestedComponent = manifest.FirstOrDefault(c => 
+            var requestedComponent = manifest.Local.FirstOrDefault(c => 
                 c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
                 && c.Version == requestedVersion);
 
@@ -52,11 +45,11 @@ public class RemoveVerb(RootCommand rootCommand)
                 return;
             }
 
-            await requestedComponent.Uninstall(_dotnetRootPath);
+            await requestedComponent.Uninstall(manifest);
 
             return;
         }
 
-        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", _dotnetRootPath);
+        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", Manifest.DotnetInstallLocation);
     }
 }

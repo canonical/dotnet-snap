@@ -6,7 +6,6 @@ namespace Dotnet.Installer.Console.Verbs;
 
 public class InstallVerb(RootCommand rootCommand)
 {
-    private readonly string? _dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR");
     private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
 
     public void Initialize()
@@ -30,17 +29,11 @@ public class InstallVerb(RootCommand rootCommand)
         _rootCommand.Add(installVerb);
     }
 
-    private async Task Handle(string component, string version)
+    private static async Task Handle(string component, string version)
     {
-        if (_dotnetRootPath is null)
+        if (Directory.Exists(Manifest.DotnetInstallLocation))
         {
-            System.Console.Error.WriteLine("Install path is empty");
-            return;
-        }
-
-        if (Directory.Exists(_dotnetRootPath))
-        {
-            var manifest = await Manifest.Load();
+            var manifest = await Manifest.Initialize();
             
             var requestedComponent = default(Component);
             switch (version)
@@ -49,7 +42,7 @@ public class InstallVerb(RootCommand rootCommand)
                     // TODO: Implement 'latest' support
                     break;
                 default:
-                    requestedComponent = manifest.FirstOrDefault(c => 
+                    requestedComponent = manifest.Remote.FirstOrDefault(c => 
                         c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
                         && c.Version == DotnetVersion.Parse(version));
                     break;
@@ -62,11 +55,11 @@ public class InstallVerb(RootCommand rootCommand)
                 return;
             }
 
-            await requestedComponent.Install(_dotnetRootPath);
+            await requestedComponent.Install(manifest);
 
             return;
         }
 
-        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", _dotnetRootPath);
+        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", Manifest.DotnetInstallLocation);
     }
 }

@@ -3,88 +3,71 @@ using System.Text.Json;
 
 namespace Dotnet.Installer.Core.Models;
 
-public static partial class Manifest
+public partial class Manifest
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    static Manifest()
+    private List<Component> _local;
+    private List<Component> _remote;
+    private List<Component> _merged;
+
+    public static string DotnetInstallLocation =>
+        Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR") ?? string.Empty;
+    
+    public IEnumerable<Component> Local
     {
-        LocalManifestPath = Path.Join(
-            Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR"),
-            "manifest.json"
-        );
-
-        var serverUrl = Environment.GetEnvironmentVariable("SERVER_URL")
-            ?? throw new ApplicationException("SERVER_URL environment variable is not defined.");
-
-        HttpClient = new HttpClient
-        {
-            BaseAddress = new Uri(serverUrl)
-        };
+        get => _local;
+        private set => _local = value.ToList();
     }
 
-    public static async Task<IEnumerable<Component>> Load(CancellationToken cancellationToken = default)
+    public IEnumerable<Component> Remote
     {
-        var localManifest = await LoadLocal(cancellationToken);
-        var remoteManifest = await LoadRemote(cancellationToken: cancellationToken);
-
-        return Merge(remoteManifest, localManifest);
+        get => _remote;
+        private set => _remote = value.ToList();
     }
 
-    public static async Task<IEnumerable<Component>> LoadLocal(CancellationToken cancellationToken = default)
+    public IEnumerable<Component> Merged
     {
-        if (!File.Exists(LocalManifestPath)) return [];
-
-        await using var fs = File.OpenRead(LocalManifestPath);
-        var result = await JsonSerializer.DeserializeAsync<IEnumerable<Component>>(
-            fs, JsonSerializerOptions, cancellationToken
-        );
-
-        return result ?? [];
+        get => _merged;
+        private set => _merged = value.ToList();
     }
 
-    public static async Task<IEnumerable<Component>> LoadRemote(bool latestOnly = true, CancellationToken cancellationToken = default)
+    private Manifest(List<Component> localManifest, List<Component> remoteManifest, List<Component> mergedManifest)
     {
-        var content = new List<Component>();
-        var response = await HttpClient.GetAsync("latest.json", cancellationToken);
-
-        if (response.IsSuccessStatusCode)
-        {
-            var latest = await response.Content.ReadFromJsonAsync<IEnumerable<Component>>(
-                cancellationToken: cancellationToken);
-            if (latest is not null) content.AddRange(latest);
-        }
-
-        if (!latestOnly)
-        {
-            // TODO: Implement archive manifest support
-        }
-
-        return content;
+        _local = localManifest;
+        _remote = remoteManifest;
+        _merged = mergedManifest;
     }
 
-    public static async Task Add(Component component, CancellationToken cancellationToken = default)
+    public static async Task<Manifest> Initialize(CancellationToken cancellationToken = default)
     {
-        var localManifest = (await LoadLocal(cancellationToken)).ToList();
+        var local = await LoadLocal(cancellationToken);
+        var remote = await LoadRemote(cancellationToken: cancellationToken);
+        var merged = Merge(remote, local);
+
+        return new Manifest(local, remote, merged);
+    }
+
+    public async Task Add(Component component, CancellationToken cancellationToken = default)
+    {
         component.Installation = new Installation
         {
             InstalledAt = DateTimeOffset.UtcNow
         };
-        localManifest.Add(component);
-        await Save(localManifest, cancellationToken);
+        _local.Add(component);
+        await Save(cancellationToken);
     }
 
-    public static async Task Remove(Component component, CancellationToken cancellationToken = default)
+    public async Task Remove(Component component, CancellationToken cancellationToken = default)
     {
-        var localManifest = (await LoadLocal(cancellationToken)).ToList();
-        var componentToRemove = localManifest.FirstOrDefault(c => c.Key == component.Key);
+        var componentToRemove = _local.FirstOrDefault(c => c.Key == component.Key);
         if (componentToRemove is not null)
         {
-            localManifest.Remove(componentToRemove);
+            _local.Remove(componentToRemove);
         }
-        await Save(localManifest, cancellationToken);
+        await Save(cancellationToken);
     }
 }

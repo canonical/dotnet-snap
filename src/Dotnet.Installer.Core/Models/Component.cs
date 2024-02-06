@@ -15,7 +15,7 @@ public class Component
     public required IEnumerable<string> Dependencies { get; set; }
     public Installation? Installation { get; set; }
 
-    public async Task<bool> CanInstall()
+    private async Task<bool> CanInstall()
     {
         var limits = await Limits.Load();
 
@@ -35,7 +35,7 @@ public class Component
         return false;
     }
 
-    public async Task Install(string dotnetRootPath)
+    public async Task Install(Manifest manifest)
     {
         // TODO: Double-check architectures from Architecture enum
         var architecture = RuntimeInformation.OSArchitecture switch
@@ -59,36 +59,35 @@ public class Component
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
-                var filePath = await FileHandler.DownloadFile(debUrl, dotnetRootPath);
+                var filePath = await FileHandler.DownloadFile(debUrl, Manifest.DotnetInstallLocation);
 
-                await FileHandler.ExtractDeb(filePath, dotnetRootPath);
+                await FileHandler.ExtractDeb(filePath, Manifest.DotnetInstallLocation);
 
                 File.Delete(filePath);
             }
 
             // Register the installation of this component in the local manifest file
-            await Manifest.Add(this);
+            await manifest.Add(this);
         }
         else
         {
             Console.WriteLine("{0} already installed!", Key);
         }
-
-        var manifest = await Manifest.Load();
+        
         foreach (var dependency in Dependencies)
         {
-            var component = manifest.First(c => c.Key == dependency);
-            await component.Install(dotnetRootPath);
+            var component = manifest.Remote.First(c => c.Key == dependency);
+            await component.Install(manifest);
         }
     }
 
-    public async Task Uninstall(string dotnetRootPath)
+    public async Task Uninstall(Manifest manifest)
     {
         if (Installation is not null)
         {
             foreach (var package in Packages)
             {
-                var registrationFileName = Path.Combine(dotnetRootPath, $"{package.Name}.files");
+                var registrationFileName = Path.Combine(Manifest.DotnetInstallLocation, $"{package.Name}.files");
 
                 if (!File.Exists(registrationFileName))
                 {
@@ -105,10 +104,10 @@ public class Component
             }
 
             // Check for any empty directories
-            DirectoryHandler.RemoveEmptyDirectories(dotnetRootPath);
+            DirectoryHandler.RemoveEmptyDirectories(Manifest.DotnetInstallLocation);
 
             Installation = null;
-            await Manifest.Remove(this);
+            await manifest.Remove(this);
         }
     }
 }

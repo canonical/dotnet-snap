@@ -23,16 +23,17 @@ public class ListVerb(RootCommand rootCommand)
         _rootCommand.Add(listVerb);
     }
 
-    private async Task Handle(bool availableOptionValue)
+    private static async Task Handle(bool availableOptionValue)
     {
-        var manifest = availableOptionValue
-            ? await Manifest.Load()
-            : await Manifest.LoadLocal();
+        var manifest = await Manifest.Initialize();
+        var components = availableOptionValue
+            ? manifest.Merged
+            : manifest.Local;
 
         var treeTitle = availableOptionValue ? "Available Components" : "Installed Components";
         var tree = new Tree(treeTitle);
 
-        foreach (var item in manifest.GroupBy(c => c.Version.Major))
+        foreach (var item in components.GroupBy(c => c.Version.Major))
         {
             var majorVersionNode = tree.AddNode($".NET {item.Key}");
 
