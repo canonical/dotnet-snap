@@ -16,16 +16,21 @@ public class ListVerb(RootCommand rootCommand)
             name: "--available",
             description: "Lists all available .NET versions to install"
         );
+        var allOption = new Option<bool>(
+            name: "--all",
+            description: "Includes past .NET versions available to install"
+        );
         listVerb.AddOption(availableOption);
+        listVerb.AddOption(allOption);
 
-        listVerb.SetHandler(Handle, availableOption);
+        listVerb.SetHandler(Handle, availableOption, allOption);
 
         _rootCommand.Add(listVerb);
     }
 
-    private static async Task Handle(bool availableOptionValue)
+    private static async Task Handle(bool availableOptionValue, bool allOption)
     {
-        var manifest = await Manifest.Initialize();
+        var manifest = await Manifest.Initialize(includeArchive: allOption);
         var components = availableOptionValue
             ? manifest.Merged
             : manifest.Local;
@@ -33,18 +38,38 @@ public class ListVerb(RootCommand rootCommand)
         var treeTitle = availableOptionValue ? "Available Components" : "Installed Components";
         var tree = new Tree(treeTitle);
 
-        foreach (var item in components.GroupBy(c => c.Version.Major))
+        foreach (var versionGroup in components.GroupBy(c => c.Version.Major))
         {
-            var majorVersionNode = tree.AddNode($".NET {item.Key}");
-
-            foreach (var component in item)
+            var majorVersionNode = tree.AddNode($".NET {versionGroup.Key}");
+            
+            foreach (var componentGroup in versionGroup.GroupBy(c => c.Name))
             {
                 var stringBuilder = new StringBuilder();
 
-                stringBuilder.Append($"{component.Description}: {component.Version}");
-                if (component.Installation is not null)
+                stringBuilder.Append($"{componentGroup.Last().Description}:");
+
+                var orderedComponents = componentGroup
+                    .OrderBy(c => c.Version)
+                    .ToList();
+                
+                foreach (var component in orderedComponents)
                 {
-                    stringBuilder.Append(" [bold green]Installed :check_mark_button:[/]");
+                    if (component.Installation is not null)
+                    {
+                        stringBuilder.Append($" [[{component.Version}");
+                        stringBuilder.Append(" [bold green]Installed :check_mark_button:[/]");
+                        stringBuilder.Append("]]");
+                    }
+                    else if (component.Installation is null && orderedComponents.Count > 1)
+                    {
+                        stringBuilder.Append($" \u2192 [[{component.Version}");
+                        stringBuilder.Append(" [bold yellow]Update available![/]");
+                        stringBuilder.Append("]]");
+                    }
+                    else
+                    {
+                        stringBuilder.Append($" [[{component.Version}]]");
+                    }
                 }
                 
                 majorVersionNode.AddNode(stringBuilder.ToString());

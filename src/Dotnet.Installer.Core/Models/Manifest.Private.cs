@@ -9,6 +9,8 @@ public partial class Manifest
     private static readonly string LocalManifestPath = 
         Path.Join(Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR"), "manifest.json");
     
+    private static readonly string[] SupportedVersions = ["6.0", "7.0", "8.0"];
+    
     private static readonly HttpClient HttpClient = new()
     {
         BaseAddress = new Uri(Environment.GetEnvironmentVariable("SERVER_URL") 
@@ -28,7 +30,7 @@ public partial class Manifest
         return result ?? [];
     }
 
-    private static async Task<List<Component>> LoadRemote(bool latestOnly = true, CancellationToken cancellationToken = default)
+    private static async Task<List<Component>> LoadRemote(bool includeArchive = false, CancellationToken cancellationToken = default)
     {
         var content = new List<Component>();
         var response = await HttpClient.GetAsync("latest.json", cancellationToken);
@@ -40,9 +42,19 @@ public partial class Manifest
             if (latest is not null) content.AddRange(latest);
         }
 
-        if (!latestOnly)
+        if (includeArchive)
         {
-            // TODO: Implement archive manifest support
+            foreach (var version in SupportedVersions)
+            {
+                response = await HttpClient.GetAsync($"{version}/archive.json", cancellationToken);
+
+                if (!response.IsSuccessStatusCode) continue;
+                
+                var archive =
+                    await response.Content.ReadFromJsonAsync<List<Component>>(cancellationToken: cancellationToken);
+                    
+                if (archive is not null) content.AddRange(archive);
+            }
         }
 
         return content;

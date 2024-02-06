@@ -15,7 +15,8 @@ public partial class Manifest
     private List<Component> _merged;
 
     public static string DotnetInstallLocation =>
-        Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR") ?? string.Empty;
+        Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR") 
+            ?? throw new ApplicationException("DOTNET_INSTALL_DIR is not set.");
     
     public IEnumerable<Component> Local
     {
@@ -42,10 +43,10 @@ public partial class Manifest
         _merged = mergedManifest;
     }
 
-    public static async Task<Manifest> Initialize(CancellationToken cancellationToken = default)
+    public static async Task<Manifest> Initialize(bool includeArchive = false, CancellationToken cancellationToken = default)
     {
         var local = await LoadLocal(cancellationToken);
-        var remote = await LoadRemote(cancellationToken: cancellationToken);
+        var remote = await LoadRemote(includeArchive, cancellationToken);
         var merged = Merge(remote, local);
 
         return new Manifest(local, remote, merged);

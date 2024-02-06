@@ -33,7 +33,7 @@ public class InstallVerb(RootCommand rootCommand)
     {
         if (Directory.Exists(Manifest.DotnetInstallLocation))
         {
-            var manifest = await Manifest.Initialize();
+            var manifest = await Manifest.Initialize(includeArchive: true);
             
             var requestedComponent = default(Component);
             switch (version)
