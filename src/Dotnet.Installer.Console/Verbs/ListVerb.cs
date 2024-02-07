@@ -12,33 +12,23 @@ public class ListVerb(RootCommand rootCommand)
     public void Initialize()
     {
         var listVerb = new Command("list", "List installed and available .NET versions");
-        var availableOption = new Option<bool>(
-            name: "--available",
-            description: "Lists all available .NET versions to install"
-        );
         var allOption = new Option<bool>(
             name: "--all",
             description: "Includes past .NET versions available to install"
         );
-        listVerb.AddOption(availableOption);
         listVerb.AddOption(allOption);
 
-        listVerb.SetHandler(Handle, availableOption, allOption);
+        listVerb.SetHandler(Handle, allOption);
 
         _rootCommand.Add(listVerb);
     }
 
-    private static async Task Handle(bool availableOptionValue, bool allOption)
+    private static async Task Handle(bool allOption)
     {
         var manifest = await Manifest.Initialize(includeArchive: allOption);
-        var components = availableOptionValue
-            ? manifest.Merged
-            : manifest.Local;
+        var tree = new Tree("Available Components");
 
-        var treeTitle = availableOptionValue ? "Available Components" : "Installed Components";
-        var tree = new Tree(treeTitle);
-
-        foreach (var versionGroup in components.GroupBy(c => c.Version.Major))
+        foreach (var versionGroup in manifest.Merged.GroupBy(c => c.Version.Major))
         {
             var majorVersionNode = tree.AddNode($".NET {versionGroup.Key}");
             
