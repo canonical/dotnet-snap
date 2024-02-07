@@ -15,6 +15,8 @@ public class Component
     public required IEnumerable<string> Dependencies { get; set; }
     public Installation? Installation { get; set; }
 
+    public event EventHandler<string>? PackageChanged;
+
     private async Task<bool> CanInstall()
     {
         var limits = await Limits.Load();
@@ -55,7 +57,7 @@ public class Component
         {
             foreach (var package in Packages)
             {
-                Console.WriteLine($"Installing {package.Name}");
+                PackageChanged?.Invoke(this, package.Name);
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 

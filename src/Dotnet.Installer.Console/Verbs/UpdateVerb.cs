@@ -77,12 +77,17 @@ public class UpdateVerb(RootCommand rootCommand)
                                 System.Console.Error.WriteLine("ERROR: Could not update {0}", componentGroup.Key);
                                 continue;
                             }
+                            
+                            toInstall.PackageChanged += (sender, package) =>
+                                AnsiConsole.WriteLine($"Installing {package}");
 
                             context.Status(
                                 $"Updating {toUninstall.Name} from {toUninstall.Version} to {toInstall.Version}...");
 
                             await toUninstall.Uninstall(manifest);
                             await toInstall.Install(manifest);
+
+                            context.Status("[green]Update complete :check_mark_button:[/]");
                         }
                     }
                 });
