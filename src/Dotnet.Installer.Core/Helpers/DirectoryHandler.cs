@@ -26,7 +26,7 @@ public static class DirectoryHandler
         {
             var path = Path.Combine(destinationDirectory, file.Name);
             result.Add(path);
-            file.MoveTo(path);
+            file.MoveTo(path, overwrite: true);
         }
 
         // Copy subdirectories and their contents to the new location.
