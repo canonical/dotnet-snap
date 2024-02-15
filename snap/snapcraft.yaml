@@ -18,6 +18,7 @@ confinement: classic
 package-repositories:
   - type: apt
     ppa: dotnet/dotnet8
+    priority: always
 
 parts:
   dotnet-installer:
@@ -43,8 +44,15 @@ parts:
     plugin: nil
     build-attributes:
       - enable-patchelf
+    build-packages:
+      - patchelf
     stage-packages:
       - dotnet-hostfxr-8.0
+    # override-stage: |
+    #   craftctl default
+    #   patchelf --set-interpreter /snap/core22/current/lib64/ld-linux-x86-64.so.2 usr/lib/dotnet/dotnet
+    #   patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/lib/dotnet/dotnet
+    #   patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/lib/dotnet/host/fxr/8.0.1/libhostfxr.so
   
   netstandard-targeting-pack:
     plugin: nil
