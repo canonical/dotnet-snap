@@ -17,14 +17,4 @@
     <ProjectReference Include="..\Dotnet.Installer.Core\Dotnet.Installer.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Scripts/" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <Content Include="Scripts/*.*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>
