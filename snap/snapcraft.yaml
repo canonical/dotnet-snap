@@ -63,7 +63,6 @@ apps:
   dotnet:
     command: Scripts/dotnet-initiator.sh
     environment:
-      DOTNET_ROOT: $SNAP_COMMON/dotnet
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
       LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib/x86_64-linux-gnu
       LIMITS_PATH: $SNAP/Configuration/limits.json

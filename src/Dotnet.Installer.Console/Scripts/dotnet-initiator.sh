@@ -6,5 +6,5 @@ if [ "$1" = "installer" ]; then
 else
     # User is not invoking the .NET installer tool.
     # Pass-through all arguments to .NET host.
-    "$DOTNET_ROOT"/dotnet "$@"
+    "$DOTNET_INSTALL_DIR"/dotnet "$@"
 fi
