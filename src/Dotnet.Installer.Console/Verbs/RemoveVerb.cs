@@ -1,6 +1,8 @@
 ﻿using System.CommandLine;
+using System.Text;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Types;
+using Spectre.Console;
 
 namespace Dotnet.Installer.Console.Verbs;
 
@@ -19,15 +21,23 @@ public class RemoveVerb(RootCommand rootCommand)
             name: "version",
             description: "The .NET component version to be removed (version)."
         );
+        var yesOption = new Option<bool>(
+            name: "--yes",
+            description: "Say yes to all prompts")
+        {
+            IsRequired = false
+        };
+        
         removeVerb.AddArgument(componentArgument);
         removeVerb.AddArgument(versionArgument);
+        removeVerb.AddOption(yesOption);
 
-        removeVerb.SetHandler(Handle, componentArgument, versionArgument);
+        removeVerb.SetHandler(Handle, componentArgument, versionArgument, yesOption);
 
         _rootCommand.Add(removeVerb);
     }
 
-    private static async Task Handle(string component, string version)
+    private static async Task Handle(string component, string version, bool yesOption)
     {
         if (Directory.Exists(Manifest.DotnetInstallLocation))
         {
@@ -45,7 +55,32 @@ public class RemoveVerb(RootCommand rootCommand)
                 return;
             }
 
+            var dependencyTree = new DependencyTree(manifest.Local);
+            var reverseDependencies = 
+                dependencyTree.GetReverseDependencies(requestedComponent.Key);
+
+            if (reverseDependencies.Count != 0 && !yesOption)
+            {
+                var confirmationPrompt = new StringBuilder();
+                confirmationPrompt.AppendLine("This will also remove:");
+                foreach (var reverseDependency in reverseDependencies)
+                {
+                    confirmationPrompt.AppendLine($"\t* {reverseDependency.Key}");
+                }
+
+                confirmationPrompt.AppendLine("Continue?");
+
+                if (!AnsiConsole.Confirm(confirmationPrompt.ToString(), defaultValue: false))
+                {
+                    return;
+                }
+            }
+
             await requestedComponent.Uninstall(manifest);
+            foreach (var reverseDependency in reverseDependencies)
+            {
+                await reverseDependency.Uninstall(manifest);
+            }
 
             return;
         }
