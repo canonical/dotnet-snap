@@ -37,7 +37,7 @@
 
 ## About The Project
 
-![Screen Shot](images/screenshot.png)
+![Screen Shot](images/demo.gif)
 
 This is the source code for the .NET snap package. It includes shared .NET components, such as the latest .NET host, as well as an installer tool that will allow you to install several versions of .NET side-by-side, all within your snap environment.
 
