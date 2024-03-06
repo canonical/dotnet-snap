@@ -1,7 +1,6 @@
-﻿using System.Net.Http.Json;
+﻿using CliWrap;
 using System.Text;
 using System.Text.Json;
-using CliWrap;
 
 namespace Dotnet.Installer.Core.Models;
 
@@ -14,9 +13,11 @@ public partial class Manifest
     
     private static readonly HttpClient HttpClient = new()
     {
-        BaseAddress = new Uri(Environment.GetEnvironmentVariable("SERVER_URL") 
+        #if !DEBUG
+        BaseAddress = new Uri(Environment.GetEnvironmentVariable("SERVER_URL")
                               ?? throw new ApplicationException(
                                   "SERVER_URL environment variable is not defined."))
+        #endif
     };
 
     private static async Task<List<Component>> LoadLocal(CancellationToken cancellationToken = default)

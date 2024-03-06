@@ -60,7 +60,7 @@ public class InstallVerb(RootCommand rootCommand)
                 .Spinner(Spinner.Known.Dots12)
                 .StartAsync("Thinking...", async context =>
                 {
-                    requestedComponent.PackageChanged += (sender, package) =>
+                    requestedComponent.InstallingPackageChanged += (sender, package) =>
                         context.Status($"Installing {package}");
 
                     await requestedComponent.Install(manifest);

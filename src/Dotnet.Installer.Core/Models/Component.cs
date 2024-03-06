@@ -15,7 +15,9 @@ public class Component
     public required IEnumerable<string> Dependencies { get; set; }
     public Installation? Installation { get; set; }
 
-    public event EventHandler<string>? PackageChanged;
+    public event EventHandler? InstallationStarted;
+    public event EventHandler? InstallationFinished;
+    public event EventHandler<string>? InstallingPackageChanged; 
 
     private async Task<bool> CanInstall()
     {
@@ -55,9 +57,11 @@ public class Component
 
         if (Installation is null)
         {
+            InstallationStarted?.Invoke(this, EventArgs.Empty);
+            
             foreach (var package in Packages)
             {
-                PackageChanged?.Invoke(this, package.Name);
+                InstallingPackageChanged?.Invoke(this, package.Name);
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
@@ -70,6 +74,8 @@ public class Component
 
             // Register the installation of this component in the local manifest file
             await manifest.Add(this);
+            
+            InstallationFinished?.Invoke(this, EventArgs.Empty);
         }
         else
         {

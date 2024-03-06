@@ -10,29 +10,31 @@ public class UpdateVerb(RootCommand rootCommand)
 
     public void Initialize()
     {
-        var installVerb = new Command("update", "Updates a .NET component in the system");
+        var updateVerb = new Command("update", "Updates a .NET component in the system");
         var componentArgument = new Argument<string>(
             name: "component",
-            description: "The .NET component name to be installed (dotnet-runtime, aspnetcore-runtime, runtime, sdk)."
-        );
-        componentArgument.Arity = ArgumentArity.ZeroOrOne;
+            description: "The .NET component name to be updated (dotnet-runtime, aspnetcore-runtime, runtime, sdk).")
+            {
+                Arity = ArgumentArity.ZeroOrOne
+            };
         var allOption = new Option<bool>(
             name: "--all",
             description: "Updates all components with updates available."
         );
-        installVerb.AddArgument(componentArgument);
-        installVerb.AddOption(allOption);
+        updateVerb.AddArgument(componentArgument);
+        updateVerb.AddOption(allOption);
 
-        installVerb.SetHandler(Handle, componentArgument, allOption);
+        updateVerb.SetHandler(Handle, componentArgument, allOption);
 
-        _rootCommand.Add(installVerb);
+        _rootCommand.Add(updateVerb);
     }
 
     private async Task Handle(string componentArgument, bool allOption)
     {
-        if (!string.IsNullOrWhiteSpace(componentArgument) && allOption)
+        if ((!string.IsNullOrWhiteSpace(componentArgument) && allOption) ||
+            (string.IsNullOrWhiteSpace(componentArgument) && !allOption))
         {
-            System.Console.Error.WriteLine("ERROR: Either choose a component or update --all");
+            System.Console.Error.WriteLine("ERROR: Either name a component or update --all");
             return;
         }
 
@@ -78,7 +80,7 @@ public class UpdateVerb(RootCommand rootCommand)
                                 continue;
                             }
                             
-                            toInstall.PackageChanged += (sender, package) =>
+                            toInstall.InstallingPackageChanged += (sender, package) =>
                                 AnsiConsole.WriteLine($"Installing {package}");
 
                             context.Status(
