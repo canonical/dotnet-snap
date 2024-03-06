@@ -18,18 +18,28 @@ public partial class Manifest
         Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR") 
             ?? throw new ApplicationException("DOTNET_INSTALL_DIR is not set.");
     
+    /// <summary>
+    /// The local manifest, which includes currently installed components.
+    /// </summary>
     public IEnumerable<Component> Local
     {
         get => _local;
         private set => _local = value.ToList();
     }
 
+    /// <summary>
+    /// The remote manifest, which includes available components to be downloaded.
+    /// </summary>
     public IEnumerable<Component> Remote
     {
         get => _remote;
         private set => _remote = value.ToList();
     }
 
+    /// <summary>
+    /// The merged manifest, which is the local and remote manifests merged into one list.
+    /// Installed components can be told apart by verifying whether <c>Installation != null</c>.
+    /// </summary>
     public IEnumerable<Component> Merged
     {
         get => _merged;

@@ -41,16 +41,18 @@ public class ListVerb(RootCommand rootCommand)
                 var orderedComponents = componentGroup
                     .OrderBy(c => c.Version)
                     .ToList();
-                
+
+                var componentHasPreviousVersionInstalled = false;
                 foreach (var component in orderedComponents)
                 {
                     if (component.Installation is not null)
                     {
+                        componentHasPreviousVersionInstalled = true;
                         stringBuilder.Append($" [[{component.Version}");
                         stringBuilder.Append(" [bold green]Installed :check_mark_button:[/]");
                         stringBuilder.Append("]]");
                     }
-                    else if (component.Installation is null && orderedComponents.Count > 1)
+                    else if (component.Installation is null && orderedComponents.Count > 1 && componentHasPreviousVersionInstalled)
                     {
                         stringBuilder.Append($" \u2192 [[{component.Version}");
                         stringBuilder.Append(" [bold yellow]Update available![/]");

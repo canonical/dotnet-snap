@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using CliWrap;
 
 namespace Dotnet.Installer.Core.Models;
 
@@ -33,6 +34,32 @@ public partial class Manifest
     private static async Task<List<Component>> LoadRemote(bool includeArchive = false, CancellationToken cancellationToken = default)
     {
         var content = new List<Component>();
+
+        #if DEBUG
+        await Cli.Wrap("git")
+            .WithArguments(["rev-parse", "--show-toplevel"])
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(path =>
+            {
+                var manifestLocation = Path.Join(path, "manifest", "latest.json");
+                if (!File.Exists(manifestLocation)) return;
+                var latest = JsonSerializer.Deserialize<List<Component>>(
+                    File.ReadAllText(manifestLocation), JsonSerializerOptions);
+                content.AddRange(latest ?? []);
+
+                if (includeArchive)
+                {
+                    foreach (var version in SupportedVersions)
+                    {
+                        var versionArchiveLocation = Path.Join(path, "manifest", version, "archive.json");
+                        if (!File.Exists(versionArchiveLocation)) return;
+                        var versionArchive = JsonSerializer.Deserialize<List<Component>>(
+                            File.ReadAllText(versionArchiveLocation), JsonSerializerOptions);
+                        content.AddRange(versionArchive ?? []);
+                    }
+                }
+            }))
+            .ExecuteAsync(cancellationToken);
+        #else
         var response = await HttpClient.GetAsync("latest.json", cancellationToken);
 
         if (response.IsSuccessStatusCode)
@@ -56,6 +83,7 @@ public partial class Manifest
                 if (archive is not null) content.AddRange(archive);
             }
         }
+        #endif
 
         return content;
     }
