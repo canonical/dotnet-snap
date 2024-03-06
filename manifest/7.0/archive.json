@@ -7,7 +7,7 @@
         "version": "7.0.13",
         "packages": [
             {
-                "name": "dotnet-runtime-6.0",
+                "name": "dotnet-runtime-7.0",
                 "version": "7.0.113-0ubuntu1~22.04.1"
             }
         ],
@@ -21,7 +21,7 @@
         "version": "7.0.13",
         "packages": [
             {
-                "name": "aspnetcore-runtime-6.0",
+                "name": "aspnetcore-runtime-7.0",
                 "version": "7.0.113-0ubuntu1~22.04.1"
             }
         ],
@@ -37,23 +37,23 @@
         "version": "7.0.113",
         "packages": [
             {
-                "name": "aspnetcore-targeting-pack-6.0",
+                "name": "aspnetcore-targeting-pack-7.0",
                 "version": "7.0.113-0ubuntu1~22.04.1"
             },
             {
-                "name": "dotnet-apphost-pack-6.0",
+                "name": "dotnet-apphost-pack-7.0",
                 "version": "7.0.113-0ubuntu1~22.04.1"
             },
             {
-                "name": "dotnet-sdk-6.0",
+                "name": "dotnet-sdk-7.0",
                 "version": "7.0.113-0ubuntu1~22.04.1"
             },
             {
-                "name": "dotnet-targeting-pack-6.0",
+                "name": "dotnet-targeting-pack-7.0",
                 "version": "7.0.113-0ubuntu1~22.04.1"
             },
             {
-                "name": "dotnet-templates-6.0",
+                "name": "dotnet-templates-7.0",
                 "version": "7.0.113-0ubuntu1~22.04.1"
             }
         ],
@@ -69,7 +69,7 @@
         "version": "7.0.14",
         "packages": [
             {
-                "name": "dotnet-runtime-6.0",
+                "name": "dotnet-runtime-7.0",
                 "version": "7.0.114-0ubuntu1~22.04.1"
             }
         ],
@@ -83,7 +83,7 @@
         "version": "7.0.14",
         "packages": [
             {
-                "name": "aspnetcore-runtime-6.0",
+                "name": "aspnetcore-runtime-7.0",
                 "version": "7.0.114-0ubuntu1~22.04.1"
             }
         ],
@@ -99,23 +99,23 @@
         "version": "7.0.114",
         "packages": [
             {
-                "name": "aspnetcore-targeting-pack-6.0",
+                "name": "aspnetcore-targeting-pack-7.0",
                 "version": "7.0.114-0ubuntu1~22.04.1"
             },
             {
-                "name": "dotnet-apphost-pack-6.0",
+                "name": "dotnet-apphost-pack-7.0",
                 "version": "7.0.114-0ubuntu1~22.04.1"
             },
             {
-                "name": "dotnet-sdk-6.0",
+                "name": "dotnet-sdk-7.0",
                 "version": "7.0.114-0ubuntu1~22.04.1"
             },
             {
-                "name": "dotnet-targeting-pack-6.0",
+                "name": "dotnet-targeting-pack-7.0",
                 "version": "7.0.114-0ubuntu1~22.04.1"
             },
             {
-                "name": "dotnet-templates-6.0",
+                "name": "dotnet-templates-7.0",
                 "version": "7.0.114-0ubuntu1~22.04.1"
             }
         ],

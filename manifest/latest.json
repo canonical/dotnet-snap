@@ -62,11 +62,11 @@
       ]
    },
    {
-      "key": "dotnet-runtime-7.0.15",
+      "key": "dotnet-runtime-7.0.16",
       "name": "dotnet-runtime",
       "description": "Runtime",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "7.0.15",
+      "version": "7.0.16",
       "packages": [
          {
             "name": "dotnet-runtime-7.0",
