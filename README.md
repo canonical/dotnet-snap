@@ -13,13 +13,13 @@
     <a href="https://foo.bar"><strong>Explore the docs »</strong></a>
     <br/>
     <br/>
-    <a href="https://github.com/mateusrodrigues/dotnet-snap/issues">Report Bug</a>
+    <a href="https://github.com/canonical/dotnet-snap/issues">Report Bug</a>
     .
-    <a href="https://github.com/mateusrodrigues/dotnet-snap/issues">Request Feature</a>
+    <a href="https://github.com/canonical/dotnet-snap/issues">Request Feature</a>
   </p>
 </p>
 
-![Downloads](https://img.shields.io/github/downloads/mateusrodrigues/dotnet-snap/total) ![Contributors](https://img.shields.io/github/contributors/mateusrodrigues/dotnet-snap?color=dark-green) ![Issues](https://img.shields.io/github/issues/mateusrodrigues/dotnet-snap) ![License](https://img.shields.io/github/license/mateusrodrigues/dotnet-snap) 
+![Downloads](https://img.shields.io/github/downloads/canonical/dotnet-snap/total) ![Contributors](https://img.shields.io/github/contributors/canonical/dotnet-snap?color=dark-green) ![Issues](https://img.shields.io/github/issues/canonical/dotnet-snap) ![License](https://img.shields.io/github/license/canonical/dotnet-snap) 
 
 ## Table Of Contents
 
@@ -72,15 +72,15 @@ To see which versions you currently have installed in your system, simply run `d
 
 ## Roadmap
 
-See the [open issues](https://github.com/mateusrodrigues/dotnet-snap/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/canonical/dotnet-snap/issues) for a list of proposed features (and known issues).
 
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-* If you have suggestions for adding or removing features, feel free to [open an issue](https://github.com/mateusrodrigues/dotnet-snap/issues/new) to discuss it before creating a pull request with your changes.
+* If you have suggestions for adding or removing features, feel free to [open an issue](https://github.com/canonical/dotnet-snap/issues/new) to discuss it before creating a pull request with your changes.
 * Please make sure you check your spelling and grammar.
 * Create individual PR for each suggestion.
-* Please also read through the [Code Of Conduct](https://github.com/mateusrodrigues/dotnet-snap/blob/main/CODE_OF_CONDUCT.md) before posting your first idea as well.
+* Please also read through the [Code Of Conduct](https://github.com/canonical/dotnet-snap/blob/main/CODE_OF_CONDUCT.md) before posting your first idea as well.
 
 ### Creating A Pull Request
 
@@ -92,11 +92,11 @@ Contributions are what make the open source community such an amazing place to b
 
 ## License
 
-See [LICENSE](https://github.com/mateusrodrigues/dotnet-snap/blob/main/LICENSE.md) for more information.
+See [LICENSE](https://github.com/canonical/dotnet-snap/blob/main/LICENSE.md) for more information.
 
 ## Authors
 
-* **Mateus Rodrigues de Morais** - *Canonical* - [GitHub](https://github.com/mateusrodrigues/)
+* **Mateus Rodrigues de Morais** - *Canonical* - [GitHub](https://github.com/canonical/)
 
 ## Acknowledgements
 
