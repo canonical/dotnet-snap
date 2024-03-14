@@ -10,7 +10,10 @@
     A snap package for .NET
     <br/>
     <br/>
-    <a href="https://foo.bar"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/canonical/dotnet-snap/actions/workflows/build-on-main.yaml"><img src="https://github.com/canonical/dotnet-snap/actions/workflows/build-on-main.yaml/badge.svg?event=push"/></a>
+    <br/>
+    <br/>
+    <a href="https://github.com/canonical/dotnet-snap/wiki"><strong>Explore the docs »</strong></a>
     <br/>
     <br/>
     <a href="https://github.com/canonical/dotnet-snap/issues">Report Bug</a>
@@ -19,7 +22,7 @@
   </p>
 </p>
 
-![Downloads](https://img.shields.io/github/downloads/canonical/dotnet-snap/total) ![Contributors](https://img.shields.io/github/contributors/canonical/dotnet-snap?color=dark-green) ![Issues](https://img.shields.io/github/issues/canonical/dotnet-snap) ![License](https://img.shields.io/github/license/canonical/dotnet-snap) 
+![Downloads](https://img.shields.io/github/downloads/canonical/dotnet-snap/total) ![Contributors](https://img.shields.io/github/contributors/canonical/dotnet-snap?color=dark-green) ![Issues](https://img.shields.io/github/issues/canonical/dotnet-snap) ![License](https://img.shields.io/github/license/canonical/dotnet-snap)
 
 ## Table Of Contents
 
@@ -46,7 +49,7 @@ This is the source code for the .NET snap package. It includes shared .NET compo
 This project is built with:
 
 - Snapcraft
-- C# (.NET 7)
+- C# (.NET 8)
 - Some (little) bash scripting :)
 
 ## Getting Started
@@ -92,11 +95,11 @@ Contributions are what make the open source community such an amazing place to b
 
 ## License
 
-See [LICENSE](https://github.com/canonical/dotnet-snap/blob/main/LICENSE.md) for more information.
+See [LICENSE](https://github.com/canonical/dotnet-snap/blob/main/LICENSE) for more information.
 
 ## Authors
 
-* **Mateus Rodrigues de Morais** - *Canonical* - [GitHub](https://github.com/canonical/)
+* **Mateus Rodrigues de Morais** - *Canonical* - [GitHub](https://github.com/mateusrodrigues/)
 
 ## Acknowledgements
 
