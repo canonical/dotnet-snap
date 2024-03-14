@@ -1,188 +1,188 @@
 [
    {
-      "key": "dotnet-runtime-6.0.27",
+      "key": "dotnet-runtime-6.0.28",
       "name": "dotnet-runtime",
       "description": "Runtime",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "6.0.27",
+      "version": "6.0.28",
       "packages": [
          {
             "name": "dotnet-runtime-6.0",
-            "version": "6.0.127-0ubuntu1~22.04.1"
+            "version": "6.0.128-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": []
    },
    {
-      "key": "aspnetcore-runtime-6.0.27",
+      "key": "aspnetcore-runtime-6.0.28",
       "name": "aspnetcore-runtime",
       "description": "ASP.NET Core",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "6.0.27",
+      "version": "6.0.28",
       "packages": [
          {
             "name": "aspnetcore-runtime-6.0",
-            "version": "6.0.127-0ubuntu1~22.04.1"
+            "version": "6.0.128-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": [
-         "dotnet-runtime-6.0.27"
+         "dotnet-runtime-6.0.28"
       ]
    },
    {
-      "key": "dotnet-sdk-6.0.127",
+      "key": "dotnet-sdk-6.0.128",
       "name": "dotnet-sdk",
       "description": "SDK",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "6.0.127",
+      "version": "6.0.128",
       "packages": [
          {
             "name": "aspnetcore-targeting-pack-6.0",
-            "version": "6.0.127-0ubuntu1~22.04.1"
+            "version": "6.0.128-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-apphost-pack-6.0",
-            "version": "6.0.127-0ubuntu1~22.04.1"
+            "version": "6.0.128-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-sdk-6.0",
-            "version": "6.0.127-0ubuntu1~22.04.1"
+            "version": "6.0.128-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-targeting-pack-6.0",
-            "version": "6.0.127-0ubuntu1~22.04.1"
+            "version": "6.0.128-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-templates-6.0",
-            "version": "6.0.127-0ubuntu1~22.04.1"
+            "version": "6.0.128-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": [
-         "aspnetcore-runtime-6.0.27"
+         "aspnetcore-runtime-6.0.28"
       ]
    },
    {
-      "key": "dotnet-runtime-7.0.16",
+      "key": "dotnet-runtime-7.0.17",
       "name": "dotnet-runtime",
       "description": "Runtime",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "7.0.16",
+      "version": "7.0.17",
       "packages": [
          {
             "name": "dotnet-runtime-7.0",
-            "version": "7.0.116-0ubuntu1~22.04.1"
+            "version": "7.0.117-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": []
    },
    {
-      "key": "aspnetcore-runtime-7.0.16",
+      "key": "aspnetcore-runtime-7.0.17",
       "name": "aspnetcore-runtime",
       "description": "ASP.NET Core",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "7.0.16",
+      "version": "7.0.17",
       "packages": [
          {
             "name": "aspnetcore-runtime-7.0",
-            "version": "7.0.116-0ubuntu1~22.04.1"
+            "version": "7.0.117-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": [
-         "dotnet-runtime-7.0.16"
+         "dotnet-runtime-7.0.17"
       ]
    },
    {
-      "key": "dotnet-sdk-7.0.116",
+      "key": "dotnet-sdk-7.0.117",
       "name": "dotnet-sdk",
       "description": "SDK",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "7.0.116",
+      "version": "7.0.117",
       "packages": [
          {
             "name": "aspnetcore-targeting-pack-7.0",
-            "version": "7.0.116-0ubuntu1~22.04.1"
+            "version": "7.0.117-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-apphost-pack-7.0",
-            "version": "7.0.116-0ubuntu1~22.04.1"
+            "version": "7.0.117-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-sdk-7.0",
-            "version": "7.0.116-0ubuntu1~22.04.1"
+            "version": "7.0.117-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-targeting-pack-7.0",
-            "version": "7.0.116-0ubuntu1~22.04.1"
+            "version": "7.0.117-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-templates-7.0",
-            "version": "7.0.116-0ubuntu1~22.04.1"
+            "version": "7.0.117-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": [
-         "aspnetcore-runtime-7.0.16"
+         "aspnetcore-runtime-7.0.17"
       ]
    },
    {
-      "key": "dotnet-runtime-8.0.2",
+      "key": "dotnet-runtime-8.0.3",
       "name": "dotnet-runtime",
       "description": "Runtime",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "8.0.2",
+      "version": "8.0.3",
       "packages": [
          {
             "name": "dotnet-runtime-8.0",
-            "version": "8.0.2-0ubuntu1~22.04.1"
+            "version": "8.0.3-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": []
    },
    {
-      "key": "aspnetcore-runtime-8.0.2",
+      "key": "aspnetcore-runtime-8.0.3",
       "name": "aspnetcore-runtime",
       "description": "ASP.NET Core",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "8.0.2",
+      "version": "8.0.3",
       "packages": [
          {
             "name": "aspnetcore-runtime-8.0",
-            "version": "8.0.2-0ubuntu1~22.04.1"
+            "version": "8.0.3-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": [
-         "dotnet-runtime-8.0.2"
+         "dotnet-runtime-8.0.3"
       ]
    },
    {
-      "key": "dotnet-sdk-8.0.102",
+      "key": "dotnet-sdk-8.0.103",
       "name": "dotnet-sdk",
       "description": "SDK",
       "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
-      "version": "8.0.102",
+      "version": "8.0.103",
       "packages": [
          {
             "name": "aspnetcore-targeting-pack-8.0",
-            "version": "8.0.2-0ubuntu1~22.04.1"
+            "version": "8.0.3-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-apphost-pack-8.0",
-            "version": "8.0.2-0ubuntu1~22.04.1"
+            "version": "8.0.3-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-sdk-8.0",
-            "version": "8.0.102-0ubuntu1~22.04.1"
+            "version": "8.0.103-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-targeting-pack-8.0",
-            "version": "8.0.2-0ubuntu1~22.04.1"
+            "version": "8.0.3-0ubuntu1~22.04.1"
          },
          {
             "name": "dotnet-templates-8.0",
-            "version": "8.0.102-0ubuntu1~22.04.1"
+            "version": "8.0.103-0ubuntu1~22.04.1"
          }
       ],
       "dependencies": [
-         "aspnetcore-runtime-8.0.2"
+         "aspnetcore-runtime-8.0.3"
       ]
    }
 ]
