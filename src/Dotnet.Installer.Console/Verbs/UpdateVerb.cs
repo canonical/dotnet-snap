@@ -49,8 +49,14 @@ public class UpdateVerb(RootCommand rootCommand)
 
             foreach (var group in majorVersionGroups)
             {
-                var duplicateComponents = group.Where(c1 =>
-                    group.Count(c2 => c2.Name.Equals(c1.Name)) > 1);
+                // Components that appear duplicated in the merged component list
+                // indicate an available update, as this scenario is only possible
+                // when the local manifest contains a component that is also listed
+                // in the remote 'latest' manifest. Since their versions are not the
+                // same, they appear duplicated (each with their own versions).
+                var duplicateComponents = group
+                    .Where(c1 => group
+                        .Count(c2 => c2.Name.Equals(c1.Name)) > 1);
                 componentsWithUpdates.AddRange(duplicateComponents);
             }
 
@@ -59,9 +65,10 @@ public class UpdateVerb(RootCommand rootCommand)
                 AnsiConsole.WriteLine("There are no updates available.");
             }
 
-            await AnsiConsole.Status()
+            await AnsiConsole
+                .Status()
                 .Spinner(Spinner.Known.Dots12)
-                .StartAsync("Thinking...", async context => 
+                .StartAsync("Thinking...", async context =>
                 {
                     foreach (var versionGroup in componentsWithUpdates.GroupBy(c => c.Version.Major))
                     {

@@ -1,4 +1,4 @@
-using System.CommandLine;
+﻿using System.CommandLine;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
@@ -59,12 +59,13 @@ public class InstallVerb(RootCommand rootCommand)
                 return;
             }
 
-            await AnsiConsole.Status()
+            await AnsiConsole
+                .Status()
                 .Spinner(Spinner.Known.Dots12)
                 .StartAsync("Thinking...", async context =>
                 {
                     requestedComponent.InstallingPackageChanged += (sender, package) =>
-                        context.Status($"Installing {package}");
+                        context.Status($"Installing {package.Name}");
 
                     await requestedComponent.Install(manifest);
                 });
