@@ -19,6 +19,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "hooks", "hooks", "{0CDB7334
 		snap\hooks\configure = snap\hooks\configure
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{BC2751F8-2768-47A6-AA22-04EEFA92CE88}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dotnet.Installer.Core.Tests", "tests\Dotnet.Installer.Core.Tests\Dotnet.Installer.Core.Tests.csproj", "{F97E49D6-566D-42E5-8127-5267EBD3C84E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +57,18 @@ Global
 		{8E63FFB8-326C-4BF9-B3D9-032E9C7B99DC}.Release|x64.Build.0 = Release|Any CPU
 		{8E63FFB8-326C-4BF9-B3D9-032E9C7B99DC}.Release|x86.ActiveCfg = Release|Any CPU
 		{8E63FFB8-326C-4BF9-B3D9-032E9C7B99DC}.Release|x86.Build.0 = Release|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Debug|x64.Build.0 = Debug|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Debug|x86.Build.0 = Debug|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Release|x64.ActiveCfg = Release|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Release|x64.Build.0 = Release|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Release|x86.ActiveCfg = Release|Any CPU
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -61,5 +77,6 @@ Global
 		{E19EBCA5-B58B-45F1-A23C-A35AAF25439C} = {13E05E09-CF21-458E-BBC7-51A2371C20A2}
 		{8E63FFB8-326C-4BF9-B3D9-032E9C7B99DC} = {13E05E09-CF21-458E-BBC7-51A2371C20A2}
 		{0CDB7334-6495-4660-80A9-EB89241FD28D} = {EDDB911E-F406-4222-9229-215548C17A76}
+		{F97E49D6-566D-42E5-8127-5267EBD3C84E} = {BC2751F8-2768-47A6-AA22-04EEFA92CE88}
 	EndGlobalSection
 EndGlobal
