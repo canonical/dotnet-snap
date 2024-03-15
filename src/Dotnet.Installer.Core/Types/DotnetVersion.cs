@@ -10,6 +10,10 @@ public partial class DotnetVersion(int major, int minor, int patch) : IEquatable
     public int Minor { get; } = minor;
     public int Patch { get; } = patch;
 
+    public bool IsPreview { get; set; }
+    public bool IsRc { get; set; }
+    public int? PreviewIdentifier { get; set; } = null;
+    
     public bool IsRuntime => Patch < 100;
     public bool IsSdk => !IsRuntime;
 
@@ -17,13 +21,30 @@ public partial class DotnetVersion(int major, int minor, int patch) : IEquatable
 
     public static DotnetVersion Parse(string version)
     {
-        var sections = version.Split('.');
+        var previewSplit = version.Split('-');
+        var versionSections = previewSplit[0].Split('.');
         var parsedVersion = new DotnetVersion
         (
-            int.Parse(sections[0]),
-            int.Parse(sections[1]),
-            int.Parse(sections[2])
+            int.Parse(versionSections[0]),
+            int.Parse(versionSections[1]),
+            int.Parse(versionSections[2])
         );
+        
+        if (previewSplit.Length > 1)
+        {
+            var previewVersionSections = previewSplit[1].Split('.');
+            
+            if (string.Equals("preview", previewVersionSections[0]))
+            {
+                parsedVersion.IsPreview = true;
+            }
+            else if (string.Equals("rc", previewVersionSections[0]))
+            {
+                parsedVersion.IsRc = true;
+            }
+
+            parsedVersion.PreviewIdentifier = int.Parse(previewVersionSections[1]);
+        }
         
         return parsedVersion;
     }
