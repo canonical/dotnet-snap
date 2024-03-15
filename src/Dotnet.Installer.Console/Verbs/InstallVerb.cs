@@ -40,7 +40,10 @@ public class InstallVerb(RootCommand rootCommand)
             switch (version)
             {
                 case "latest":
-                    // TODO: Implement 'latest' support
+                    requestedComponent = manifest.Remote
+                        .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                        .OrderByDescending(c => c.Version)
+                        .FirstOrDefault();
                     break;
                 default:
                     requestedComponent = manifest.Remote.FirstOrDefault(c => 
@@ -56,12 +59,13 @@ public class InstallVerb(RootCommand rootCommand)
                 return;
             }
 
-            await AnsiConsole.Status()
+            await AnsiConsole
+                .Status()
                 .Spinner(Spinner.Known.Dots12)
                 .StartAsync("Thinking...", async context =>
                 {
                     requestedComponent.InstallingPackageChanged += (sender, package) =>
-                        context.Status($"Installing {package}");
+                        context.Status($"Installing {package.Name}");
 
                     await requestedComponent.Install(manifest);
                 });

@@ -17,7 +17,7 @@ public class Component
 
     public event EventHandler? InstallationStarted;
     public event EventHandler? InstallationFinished;
-    public event EventHandler<string>? InstallingPackageChanged; 
+    public event EventHandler<Package>? InstallingPackageChanged;
 
     private async Task<bool> CanInstall()
     {
@@ -58,10 +58,23 @@ public class Component
         if (Installation is null)
         {
             InstallationStarted?.Invoke(this, EventArgs.Empty);
+
+            // If this component already has a previous version installed
+            // within the major version/feature band group, uninstall it.
+            var previousComponent = manifest.Local
+                .FirstOrDefault(c => c.Name.Equals(Name, StringComparison.CurrentCultureIgnoreCase)
+                    && c.Version.IsRuntime ? c.Version < Version :
+                        c.Version.FeatureBand == Version.FeatureBand && c.Version < Version);
+
+            if (previousComponent is not null)
+            {
+                await previousComponent.Uninstall(manifest);
+            }
             
+            // Install component packages
             foreach (var package in Packages)
             {
-                InstallingPackageChanged?.Invoke(this, package.Name);
+                InstallingPackageChanged?.Invoke(this, package);
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
