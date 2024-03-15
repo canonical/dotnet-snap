@@ -1,20 +1,11 @@
 #!/bin/sh -e
 
-if [ ! -d "$SNAP_COMMON" ]; then
-    mkdir -p "$SNAP_COMMON"
-fi
+# Copy latest host to $SNAP_COMMON
 cp -RLp "$SNAP"/usr/lib/dotnet "$SNAP_COMMON"
 
-# Create an empty local manifest file if it doesn't yet exist.
-if [ ! -e "$SNAP_COMMON"/dotnet/manifest.json ]; then
-    echo "[ ]" > "$SNAP_COMMON"/dotnet/manifest.json
-fi
-
-# Update current .NET to latest versions
-DOTNET_LATEST=$(jq -r '.sdk[0]' "$SNAP"/Configuration/limits.json)
-
+# Update current .NET installs to latest version
 DOTNET_INSTALL_DIR=$SNAP_COMMON/dotnet \
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SNAP/usr/lib/x86_64-linux-gnu \
     LIMITS_PATH=$SNAP/Configuration/limits.json \
     SERVER_URL=https://raw.githubusercontent.com/canonical/dotnet-snap/main/manifest/ \
-    "$SNAP"/Dotnet.Installer.Console install dotnet-sdk "$DOTNET_LATEST"
+    "$SNAP"/Dotnet.Installer.Console update --all
