@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
@@ -40,7 +40,10 @@ public class InstallVerb(RootCommand rootCommand)
             switch (version)
             {
                 case "latest":
-                    // TODO: Implement 'latest' support
+                    requestedComponent = manifest.Remote
+                        .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                        .OrderByDescending(c => c.Version)
+                        .FirstOrDefault();
                     break;
                 default:
                     requestedComponent = manifest.Remote.FirstOrDefault(c => 
