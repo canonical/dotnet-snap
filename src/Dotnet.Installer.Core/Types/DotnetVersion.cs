@@ -1,18 +1,49 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text;
+using System.Text.Json.Serialization;
 using Dotnet.Installer.Core.Converters;
 
 namespace Dotnet.Installer.Core.Types;
 
 [JsonConverter(typeof(DotnetVersionJsonConverter))]
-public partial class DotnetVersion(int major, int minor, int patch) : IEquatable<DotnetVersion>, IComparable<DotnetVersion>
+public partial class DotnetVersion : IEquatable<DotnetVersion>, IComparable<DotnetVersion>
 {
-    public int Major { get; } = major;
-    public int Minor { get; } = minor;
-    public int Patch { get; } = patch;
+    public DotnetVersion(int major, int minor, int patch, bool isPreview = false, bool isRc = false,
+        int? previewIdentifier = null)
+    {
+        if (isPreview && isRc)
+        {
+            throw new ApplicationException("The .NET version can either be a preview, an RC, or none.");
+        }
 
-    public bool IsPreview { get; set; }
-    public bool IsRc { get; set; }
-    public int? PreviewIdentifier { get; set; } = null;
+        if ((isPreview || isRc) && previewIdentifier is null)
+        {
+            throw new ApplicationException(
+                "You must specify a Preview Identifier if version is either a preview of an RC.");
+        }
+
+        if (!isPreview && !isRc && previewIdentifier is not null)
+        {
+            throw new ApplicationException(
+                "You can't specify a Preview Identifier if the version is neither a preview or an RC.");
+        }
+        
+        Major = major;
+        Minor = minor;
+        Patch = patch;
+
+        IsPreview = isPreview;
+        IsRc = isRc;
+
+        PreviewIdentifier = previewIdentifier;
+    }
+    
+    public int Major { get; }
+    public int Minor { get; }
+    public int Patch { get; }
+
+    public bool IsPreview { get; private set; }
+    public bool IsRc { get; private set; }
+    public int? PreviewIdentifier { get; private set; } = null;
     
     public bool IsRuntime => Patch < 100;
     public bool IsSdk => !IsRuntime;
@@ -51,6 +82,19 @@ public partial class DotnetVersion(int major, int minor, int patch) : IEquatable
 
     public override string ToString()
     {
-        return $"{Major}.{Minor}.{Patch}";
+        var versionSb = new StringBuilder();
+        
+        versionSb.Append(Major);
+        versionSb.Append('.');
+        versionSb.Append(Minor);
+        versionSb.Append('.');
+        versionSb.Append(Patch);
+
+        if (IsPreview) versionSb.Append("-preview.");
+        if (IsRc) versionSb.Append("-rc.");
+
+        versionSb.Append(PreviewIdentifier.ToString());
+
+        return versionSb.ToString();
     }
 }
