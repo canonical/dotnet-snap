@@ -43,6 +43,7 @@ public partial class DotnetVersion : IEquatable<DotnetVersion>, IComparable<Dotn
 
     public bool IsPreview { get; private set; }
     public bool IsRc { get; private set; }
+    public bool IsStable => !IsPreview && !IsRc;
     public int? PreviewIdentifier { get; private set; } = null;
     
     public bool IsRuntime => Patch < 100;

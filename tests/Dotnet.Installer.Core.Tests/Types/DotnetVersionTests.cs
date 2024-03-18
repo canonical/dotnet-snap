@@ -5,6 +5,71 @@ namespace Dotnet.Installer.Core.Tests.Types;
 public class DotnetVersionTests
 {
     [Theory]
+    [InlineData(8, 0, 100, true, false, 1, false)]
+    [InlineData(8, 0, 100, false, true, 2, false)]
+    [InlineData(6, 0, 206, false, false, null, true)]
+    public void IsStable_WhenCalled_ShouldIdentifyWhetherVersionIsStable(int major, int minor, int patch,
+        bool isPreview, bool isRc, int? previewIdentifier, bool expectedResult)
+    {
+        // Arrange
+        var version = new DotnetVersion(major, minor, patch, isPreview, isRc, previewIdentifier);
+        
+        // Act
+        var isStable = version.IsStable;
+
+        // Assert
+        Assert.Equal(expectedResult, isStable);
+    }
+    
+    [Theory]
+    [InlineData(8, 0, 0, true)]
+    [InlineData(8, 0, 100, false)]
+    public void IsRuntime_WhenCalled_ShouldMapCorrectly(int major, int minor, int patch, bool expectedResult)
+    {
+        // Arrange
+        var version = new DotnetVersion(major, minor, patch);
+
+        // Act
+        var actualResult = version.IsRuntime;
+
+        // Assert
+        Assert.Equal(expectedResult, actualResult);
+    }
+    
+    [Theory]
+    [InlineData(8, 0, 0, false)]
+    [InlineData(8, 0, 100, true)]
+    public void IsSdk_WhenCalled_ShouldMapCorrectly(int major, int minor, int patch, bool expectedResult)
+    {
+        // Arrange
+        var version = new DotnetVersion(major, minor, patch);
+
+        // Act
+        var actualResult = version.IsSdk;
+
+        // Assert
+        Assert.Equal(expectedResult, actualResult);
+    }
+
+    [Theory]
+    [InlineData(8, 0, 103, 100)]
+    [InlineData(8, 0, 201, 200)]
+    [InlineData(6, 0, 405, 400)]
+    [InlineData(6, 0, 26, null)]
+    public void FeatureBand_WhenCalled_ShouldIdentifyFeatureBandCorrectly(int major, int minor, int patch,
+        int? expectedFeatureBand)
+    {
+        // Arrange
+        var version = new DotnetVersion(major, minor, patch);
+
+        // Act
+        var featureBand = version.FeatureBand;
+
+        // Assert
+        Assert.Equal(expectedFeatureBand, featureBand);
+    }
+    
+    [Theory]
     [InlineData(8, 0, 0, false, false, null)]
     [InlineData(8, 0, 0, true, false, 1)]
     [InlineData(8, 0, 0, false, true, 2)]
@@ -61,36 +126,6 @@ public class DotnetVersionTests
         Assert.Equal(isPreview, version.IsPreview);
         Assert.Equal(isRc, version.IsRc);
         Assert.Equal(previewIdentifier, version.PreviewIdentifier);
-    }
-
-    [Theory]
-    [InlineData(8, 0, 0, true)]
-    [InlineData(8, 0, 100, false)]
-    public void IsRuntime_WhenCalled_ShouldMapCorrectly(int major, int minor, int patch, bool expectedResult)
-    {
-        // Arrange
-        var version = new DotnetVersion(major, minor, patch);
-
-        // Act
-        var actualResult = version.IsRuntime;
-
-        // Assert
-        Assert.Equal(expectedResult, actualResult);
-    }
-    
-    [Theory]
-    [InlineData(8, 0, 0, false)]
-    [InlineData(8, 0, 100, true)]
-    public void IsSdk_WhenCalled_ShouldMapCorrectly(int major, int minor, int patch, bool expectedResult)
-    {
-        // Arrange
-        var version = new DotnetVersion(major, minor, patch);
-
-        // Act
-        var actualResult = version.IsSdk;
-
-        // Assert
-        Assert.Equal(expectedResult, actualResult);
     }
 
     [Theory]
