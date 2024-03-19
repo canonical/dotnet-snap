@@ -9,7 +9,21 @@ public partial class DotnetVersion
 
         if (other.Major != Major) return Major - other.Major;
         if (other.Minor != Minor) return Minor - other.Minor;
-        return Patch - other.Patch;
+        if (other.Patch != Patch) return Patch - other.Patch;
+
+        // Version is the same, but preview information might be different
+        if ((other.IsPreview && IsPreview) || (other.IsRc && IsRc))
+            return PreviewIdentifier!.Value - other.PreviewIdentifier!.Value;
+        
+        if (other.IsPreview && IsRc) return 1;
+        if (other.IsRc && IsPreview) return -1;
+
+        return IsStable switch
+        {
+            true when !other.IsStable => 1,
+            false when other.IsStable => -1,
+            _ => 0
+        };
     }
 
     public static bool operator <(DotnetVersion lhs, DotnetVersion rhs) => lhs.CompareTo(rhs) < 0;
@@ -27,7 +41,8 @@ public partial class DotnetVersion
 
         if (GetType() != other.GetType()) return false;
 
-        return (Major == other.Major) && (Minor == other.Minor) && (Patch == other.Patch);
+        return (Major == other.Major) && (Minor == other.Minor) && (Patch == other.Patch) &&
+               (IsPreview == other.IsPreview) && (IsRc == other.IsRc) && (PreviewIdentifier == other.PreviewIdentifier);
     }
 
     public override int GetHashCode() => (Major, Minor, Patch).GetHashCode();
