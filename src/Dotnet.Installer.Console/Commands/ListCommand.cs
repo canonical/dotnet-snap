@@ -1,9 +1,9 @@
 ﻿using System.CommandLine;
 using System.Text;
-using Spectre.Console;
 using Dotnet.Installer.Core.Services.Contracts;
+using Spectre.Console;
 
-namespace Dotnet.Installer.Console.Verbs;
+namespace Dotnet.Installer.Console.Commands;
 
 public class ListCommand : Command
 {

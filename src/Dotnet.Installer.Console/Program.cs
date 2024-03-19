@@ -1,5 +1,5 @@
 ﻿using System.CommandLine;
-using Dotnet.Installer.Console.Verbs;
+using Dotnet.Installer.Console.Commands;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Services.Implementations;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,14 +16,15 @@ class Program
             .AddSingleton<ILimitsService, LimitsService>()
             .AddSingleton(serviceProvider =>
             {
+                var fileService = serviceProvider.GetRequiredService<IFileService>();
                 var manifestService = serviceProvider.GetRequiredService<IManifestService>();
                 var limitsService = serviceProvider.GetRequiredService<ILimitsService>();
                 return new RootCommand(".NET Installer command-line tool")
                 {
                     new ListCommand(manifestService),
-                    new InstallCommand(manifestService, limitsService),
-                    new RemoveCommand(manifestService),
-                    new UpdateCommand(manifestService, limitsService)
+                    new InstallCommand(fileService, limitsService, manifestService),
+                    new RemoveCommand(fileService, manifestService),
+                    new UpdateCommand(fileService, limitsService, manifestService)
                 };
             })
             .BuildServiceProvider();

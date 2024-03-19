@@ -4,14 +4,17 @@ using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
 
-namespace Dotnet.Installer.Console.Verbs;
+namespace Dotnet.Installer.Console.Commands;
 
 public class RemoveCommand : Command
 {
+    private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
 
-    public RemoveCommand(IManifestService manifestService) : base("remove", "Removes an installed .NET component from the system")
+    public RemoveCommand(IFileService fileService, IManifestService manifestService) 
+        : base("remove", "Removes an installed .NET component from the system")
     {
+        _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
 
         var componentArgument = new Argument<string>(
@@ -75,10 +78,10 @@ public class RemoveCommand : Command
                 }
             }
 
-            await requestedComponent.Uninstall(_manifestService);
+            await requestedComponent.Uninstall(_fileService, _manifestService);
             foreach (var reverseDependency in reverseDependencies)
             {
-                await reverseDependency.Uninstall(_manifestService);
+                await reverseDependency.Uninstall(_fileService, _manifestService);
             }
 
             return;

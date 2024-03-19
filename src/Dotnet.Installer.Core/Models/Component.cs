@@ -1,5 +1,5 @@
 ﻿using System.Runtime.InteropServices;
-using Dotnet.Installer.Core.Helpers;
+using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
@@ -7,13 +7,13 @@ namespace Dotnet.Installer.Core.Models;
 
 public class Component
 {
-    public required string Key { get; set; }
-    public required string Name { get; set; }
-    public required string Description { get; set; }
-    public required Uri BaseUrl { get; set; }
-    public required DotnetVersion Version { get; set; }
-    public required IEnumerable<Package> Packages { get; set; }
-    public required IEnumerable<string> Dependencies { get; set; }
+    public required string Key { get; init; }
+    public required string Name { get; init; }
+    public required string Description { get; init; }
+    public required Uri BaseUrl { get; init; }
+    public required DotnetVersion Version { get; init; }
+    public required IEnumerable<Package> Packages { get; init; }
+    public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
 
     public event EventHandler? InstallationStarted;
@@ -38,7 +38,10 @@ public class Component
         return false;
     }
 
-    public async Task Install(IManifestService manifestService, ILimitsService limitsService)
+    public async Task Install(
+        IFileService fileService,
+        ILimitsService limitsService,
+        IManifestService manifestService)
     {
         // TODO: Double-check architectures from Architecture enum
         var architecture = RuntimeInformation.OSArchitecture switch
@@ -50,8 +53,7 @@ public class Component
 
         if (!CanInstall(limitsService))
         {
-            Console.WriteLine("The component {0} {1} cannot be installed.", Name, Version);
-            return;
+            throw new VersionTooHighException($"The component {Name} {Version} cannot be installed.");
         }
 
         if (Installation is null)
@@ -67,7 +69,7 @@ public class Component
 
             if (previousComponent is not null)
             {
-                await previousComponent.Uninstall(manifestService);
+                await previousComponent.Uninstall(fileService, manifestService);
             }
             
             // Install component packages
@@ -77,9 +79,9 @@ public class Component
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
-                var filePath = await FileHandler.DownloadFile(debUrl, manifestService.DotnetInstallLocation);
+                var filePath = await fileService.DownloadFile(debUrl, manifestService.DotnetInstallLocation);
 
-                await FileHandler.ExtractDeb(filePath, manifestService.DotnetInstallLocation);
+                await fileService.ExtractDeb(filePath, manifestService.DotnetInstallLocation);
 
                 File.Delete(filePath);
             }
@@ -97,11 +99,11 @@ public class Component
         foreach (var dependency in Dependencies)
         {
             var component = manifestService.Remote.First(c => c.Key == dependency);
-            await component.Install(manifestService, limitsService);
+            await component.Install(fileService, limitsService, manifestService);
         }
     }
 
-    public async Task Uninstall(IManifestService manifestService)
+    public async Task Uninstall(IFileService fileService, IManifestService manifestService)
     {
         if (Installation is not null)
         {
@@ -125,7 +127,7 @@ public class Component
             }
 
             // Check for any empty directories
-            DirectoryHandler.RemoveEmptyDirectories(manifestService.DotnetInstallLocation);
+            fileService.RemoveEmptyDirectories(manifestService.DotnetInstallLocation);
 
             Installation = null;
             await manifestService.Remove(this);

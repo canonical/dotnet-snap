@@ -2,7 +2,7 @@
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 
-namespace Dotnet.Installer.Console;
+namespace Dotnet.Installer.Core.Services.Implementations;
 
 public partial class ManifestService : IManifestService
 {

@@ -3,18 +3,20 @@ using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 using Spectre.Console;
 
-namespace Dotnet.Installer.Console.Verbs;
+namespace Dotnet.Installer.Console.Commands;
 
 public class UpdateCommand : Command
 {
-    private readonly IManifestService _manifestService;
+    private readonly IFileService _fileService;
     private readonly ILimitsService _limitsService;
+    private readonly IManifestService _manifestService;
 
-    public UpdateCommand(IManifestService manifestService, ILimitsService limitsService)
+    public UpdateCommand(IFileService fileService, ILimitsService limitsService, IManifestService manifestService)
         : base("update", "Updates a .NET component in the system")
     {
-        _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _limitsService = limitsService ?? throw new ArgumentNullException(nameof(limitsService));
+        _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
 
         var componentArgument = new Argument<string>(
             name: "component",
@@ -96,8 +98,8 @@ public class UpdateCommand : Command
                             context.Status(
                                 $"Updating {toUninstall.Name} from {toUninstall.Version} to {toInstall.Version}...");
 
-                            await toUninstall.Uninstall(_manifestService);
-                            await toInstall.Install(_manifestService, _limitsService);
+                            await toUninstall.Uninstall(_fileService, _manifestService);
+                            await toInstall.Install(_fileService, _limitsService, _manifestService);
 
                             context.Status("[green]Update complete :check_mark_button:[/]");
                         }

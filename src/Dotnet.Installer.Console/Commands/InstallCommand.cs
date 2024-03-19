@@ -4,18 +4,20 @@ using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
 
-namespace Dotnet.Installer.Console.Verbs;
+namespace Dotnet.Installer.Console.Commands;
 
 public class InstallCommand : Command
 {
-    private readonly IManifestService _manifestService;
+    private readonly IFileService _fileService;
     private readonly ILimitsService _limitsService;
+    private readonly IManifestService _manifestService;
 
-    public InstallCommand(IManifestService manifestService, ILimitsService limitsService)
+    public InstallCommand(IFileService fileService, ILimitsService limitsService, IManifestService manifestService)
         : base("install", "Installs a new .NET component in the system")
     {
-        _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _limitsService = limitsService ?? throw new ArgumentNullException(nameof(limitsService));
+        _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
 
         var componentArgument = new Argument<string>(
             name: "component",
@@ -38,22 +40,16 @@ public class InstallCommand : Command
         if (Directory.Exists(_manifestService.DotnetInstallLocation))
         {
             await _manifestService.Initialize(includeArchive: true);
-            
-            var requestedComponent = default(Component);
-            switch (version)
+
+            var requestedComponent = version switch
             {
-                case "latest":
-                    requestedComponent = _manifestService.Remote
-                        .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                        .OrderByDescending(c => c.Version)
-                        .FirstOrDefault();
-                    break;
-                default:
-                    requestedComponent = _manifestService.Remote.FirstOrDefault(c => 
-                        c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
-                        && c.Version == DotnetVersion.Parse(version));
-                    break;
-            }
+                "latest" => _manifestService.Remote
+                    .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                    .MaxBy(c => c.Version),
+                _ => _manifestService.Remote.FirstOrDefault(c =>
+                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase) &&
+                    c.Version == DotnetVersion.Parse(version))
+            };
 
             if (requestedComponent is null)
             {
@@ -70,7 +66,7 @@ public class InstallCommand : Command
                     requestedComponent.InstallingPackageChanged += (sender, package) =>
                         context.Status($"Installing {package.Name}");
 
-                    await requestedComponent.Install(_manifestService, _limitsService);
+                    await requestedComponent.Install(_fileService, _limitsService, _manifestService);
                 });
 
             return;

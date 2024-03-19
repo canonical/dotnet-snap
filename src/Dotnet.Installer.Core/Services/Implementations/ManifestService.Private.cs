@@ -1,9 +1,10 @@
-﻿using System.Text;
+﻿using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using CliWrap;
 using Dotnet.Installer.Core.Models;
 
-namespace Dotnet.Installer.Console;
+namespace Dotnet.Installer.Core.Services.Implementations;
 
 public partial class ManifestService
 {
