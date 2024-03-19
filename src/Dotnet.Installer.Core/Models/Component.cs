@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using Dotnet.Installer.Core.Exceptions;
+using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
@@ -16,9 +17,9 @@ public class Component
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
 
-    public event EventHandler? InstallationStarted;
-    public event EventHandler? InstallationFinished;
-    public event EventHandler<Package>? InstallingPackageChanged;
+    public event EventHandler<InstallationStartedEventArgs>? InstallationStarted;
+    public event EventHandler<InstallationFinishedEventArgs>? InstallationFinished;
+    public event EventHandler<InstallingPackageChangedEventArgs>? InstallingPackageChanged;
 
     private bool CanInstall(ILimitsService limitsService)
     {
@@ -58,7 +59,7 @@ public class Component
 
         if (Installation is null)
         {
-            InstallationStarted?.Invoke(this, EventArgs.Empty);
+            InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
 
             // If this component already has a previous version installed
             // within the major version/feature band group, uninstall it.
@@ -75,7 +76,7 @@ public class Component
             // Install component packages
             foreach (var package in Packages)
             {
-                InstallingPackageChanged?.Invoke(this, package);
+                InstallingPackageChanged?.Invoke(this, new InstallingPackageChangedEventArgs(package));
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
@@ -83,13 +84,13 @@ public class Component
 
                 await fileService.ExtractDeb(filePath, manifestService.DotnetInstallLocation);
 
-                File.Delete(filePath);
+                fileService.DeleteFile(filePath);
             }
 
             // Register the installation of this component in the local manifest file
             await manifestService.Add(this);
             
-            InstallationFinished?.Invoke(this, EventArgs.Empty);
+            InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
         }
         else
         {
@@ -112,18 +113,18 @@ public class Component
                 var registrationFileName = Path.Combine(manifestService.DotnetInstallLocation, 
                     $"{package.Name}.files");
 
-                if (!File.Exists(registrationFileName))
+                if (!fileService.FileExists(registrationFileName))
                 {
                     throw new ApplicationException("Registration file does not exist!");
                 }
 
-                var files = await File.ReadAllLinesAsync(registrationFileName);
+                var files = await fileService.ReadAllLines(registrationFileName);
                 foreach (var file in files)
                 {
-                    File.Delete(file);
+                    fileService.DeleteFile(file);
                 }
 
-                File.Delete(registrationFileName);
+                fileService.DeleteFile(registrationFileName);
             }
 
             // Check for any empty directories

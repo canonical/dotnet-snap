@@ -63,8 +63,8 @@ public class InstallCommand : Command
                 .Spinner(Spinner.Known.Dots12)
                 .StartAsync("Thinking...", async context =>
                 {
-                    requestedComponent.InstallingPackageChanged += (sender, package) =>
-                        context.Status($"Installing {package.Name}");
+                    requestedComponent.InstallingPackageChanged += (sender, args) =>
+                        context.Status($"Installing {args.Package.Name}");
 
                     await requestedComponent.Install(_fileService, _limitsService, _manifestService);
                 });

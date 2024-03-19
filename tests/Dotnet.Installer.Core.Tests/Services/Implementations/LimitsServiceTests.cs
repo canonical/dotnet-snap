@@ -24,7 +24,7 @@ public class LimitsServiceTests
                         """;
 
         var fileServiceMock = new Mock<IFileService>();
-        fileServiceMock.Setup(fs => fs.Exists(It.IsAny<string>()))
+        fileServiceMock.Setup(fs => fs.FileExists(It.IsAny<string>()))
             .Returns(true);
         fileServiceMock.Setup(fs => fs.OpenRead(It.IsAny<string>()))
             .Returns(new MemoryStream(Encoding.UTF8.GetBytes(jsonInput)));
@@ -54,7 +54,7 @@ public class LimitsServiceTests
                         """;
 
         var fileServiceMock = new Mock<IFileService>();
-        fileServiceMock.Setup(fs => fs.Exists(It.IsAny<string>()))
+        fileServiceMock.Setup(fs => fs.FileExists(It.IsAny<string>()))
             .Returns(true);
         fileServiceMock.Setup(fs => fs.OpenRead(It.IsAny<string>()))
             .Returns(new MemoryStream(Encoding.UTF8.GetBytes(jsonInput)));
@@ -78,7 +78,7 @@ public class LimitsServiceTests
                         """;
 
         var fileServiceMock = new Mock<IFileService>();
-        fileServiceMock.Setup(fs => fs.Exists(It.IsAny<string>()))
+        fileServiceMock.Setup(fs => fs.FileExists(It.IsAny<string>()))
             .Returns(true);
         fileServiceMock.Setup(fs => fs.OpenRead(It.IsAny<string>()))
             .Returns(new MemoryStream(Encoding.UTF8.GetBytes(jsonInput)));
@@ -102,7 +102,7 @@ public class LimitsServiceTests
                         """;
 
         var fileServiceMock = new Mock<IFileService>();
-        fileServiceMock.Setup(fs => fs.Exists(It.IsAny<string>()))
+        fileServiceMock.Setup(fs => fs.FileExists(It.IsAny<string>()))
             .Returns(true);
         fileServiceMock.Setup(fs => fs.OpenRead(It.IsAny<string>()))
             .Returns(new MemoryStream(Encoding.UTF8.GetBytes(jsonInput)));
@@ -126,7 +126,7 @@ public class LimitsServiceTests
                         """;
 
         var fileServiceMock = new Mock<IFileService>();
-        fileServiceMock.Setup(fs => fs.Exists(It.IsAny<string>()))
+        fileServiceMock.Setup(fs => fs.FileExists(It.IsAny<string>()))
             .Returns(true);
         fileServiceMock.Setup(fs => fs.OpenRead(It.IsAny<string>()))
             .Returns(new MemoryStream(Encoding.UTF8.GetBytes(jsonInput)));

@@ -14,7 +14,7 @@ public class LimitsService : ILimitsService
         // Read limits file
         var limitsFilePath = Environment.GetEnvironmentVariable("LIMITS_PATH") ?? string.Empty;
 
-        if (!fileService.Exists(limitsFilePath)) throw new ApplicationException("Limits file could not be found.");
+        if (!fileService.FileExists(limitsFilePath)) throw new ApplicationException("Limits file could not be found.");
         
         using var fs = fileService.OpenRead(limitsFilePath);
         var limits = JsonDocument.Parse(fs);

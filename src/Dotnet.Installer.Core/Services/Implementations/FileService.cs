@@ -6,6 +6,11 @@ namespace Dotnet.Installer.Core.Services.Implementations;
 
 public class FileService : IFileService
 {
+    public void DeleteFile(string path)
+    {
+        File.Delete(path);
+    }
+
     public async Task<string> DownloadFile(Uri url, string destinationDirectory)
     {
         using var client = new HttpClient();
@@ -27,7 +32,7 @@ public class FileService : IFileService
         return fileName;
     }
 
-    public bool Exists(string path)
+    public bool FileExists(string path)
     {
         return File.Exists(path);
     }
@@ -97,6 +102,11 @@ public class FileService : IFileService
     public Stream OpenRead(string path)
     {
         return File.OpenRead(path);
+    }
+
+    public Task<string[]> ReadAllLines(string fileName)
+    {
+        return File.ReadAllLinesAsync(fileName);
     }
 
     public void RemoveEmptyDirectories(string root)
