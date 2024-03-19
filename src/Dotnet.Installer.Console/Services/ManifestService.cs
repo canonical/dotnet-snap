@@ -1,20 +1,21 @@
-﻿using System.Net.Http.Json;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Dotnet.Installer.Core.Models;
+using Dotnet.Installer.Core.Services.Contracts;
 
-namespace Dotnet.Installer.Core.Models;
+namespace Dotnet.Installer.Console;
 
-public partial class Manifest
+public partial class ManifestService : IManifestService
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    private List<Component> _local;
-    private List<Component> _remote;
-    private List<Component> _merged;
+    private List<Component> _local = [];
+    private List<Component> _remote = [];
+    private List<Component> _merged = [];
 
-    public static string DotnetInstallLocation =>
+    public string DotnetInstallLocation =>
         Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR") 
             ?? throw new ApplicationException("DOTNET_INSTALL_DIR is not set.");
     
@@ -46,20 +47,11 @@ public partial class Manifest
         private set => _merged = value.ToList();
     }
 
-    private Manifest(List<Component> localManifest, List<Component> remoteManifest, List<Component> mergedManifest)
+    public async Task Initialize(bool includeArchive = false, CancellationToken cancellationToken = default)
     {
-        _local = localManifest;
-        _remote = remoteManifest;
-        _merged = mergedManifest;
-    }
-
-    public static async Task<Manifest> Initialize(bool includeArchive = false, CancellationToken cancellationToken = default)
-    {
-        var local = await LoadLocal(cancellationToken);
-        var remote = await LoadRemote(includeArchive, cancellationToken);
-        var merged = Merge(remote, local);
-
-        return new Manifest(local, remote, merged);
+        _local = await LoadLocal(cancellationToken);
+        _remote = await LoadRemote(includeArchive, cancellationToken);
+        _merged = Merge(_remote, _local);
     }
 
     public async Task Add(Component component, CancellationToken cancellationToken = default)

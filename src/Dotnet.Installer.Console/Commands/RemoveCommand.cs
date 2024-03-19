@@ -1,18 +1,19 @@
 ﻿using System.CommandLine;
 using System.Text;
-using Dotnet.Installer.Core.Models;
+using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
 
 namespace Dotnet.Installer.Console.Verbs;
 
-public class RemoveVerb(RootCommand rootCommand)
+public class RemoveCommand : Command
 {
-    private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
+    private readonly IManifestService _manifestService;
 
-    public void Initialize()
+    public RemoveCommand(IManifestService manifestService) : base("remove", "Removes an installed .NET component from the system")
     {
-        var removeVerb = new Command("remove", "Removes an installed .NET component from the system");
+        _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+
         var componentArgument = new Argument<string>(
             name: "component",
             description: "The .NET component name to be removed (dotnet-runtime, aspnetcore-runtime, runtime, sdk)."
@@ -28,23 +29,21 @@ public class RemoveVerb(RootCommand rootCommand)
             IsRequired = false
         };
         
-        removeVerb.AddArgument(componentArgument);
-        removeVerb.AddArgument(versionArgument);
-        removeVerb.AddOption(yesOption);
+        AddArgument(componentArgument);
+        AddArgument(versionArgument);
+        AddOption(yesOption);
 
-        removeVerb.SetHandler(Handle, componentArgument, versionArgument, yesOption);
-
-        _rootCommand.Add(removeVerb);
+        this.SetHandler(Handle, componentArgument, versionArgument, yesOption);
     }
 
-    private static async Task Handle(string component, string version, bool yesOption)
+    private async Task Handle(string component, string version, bool yesOption)
     {
-        if (Directory.Exists(Manifest.DotnetInstallLocation))
+        if (Directory.Exists(_manifestService.DotnetInstallLocation))
         {
-            var manifest = await Manifest.Initialize();
+            await _manifestService.Initialize();
 
             var requestedVersion = DotnetVersion.Parse(version);
-            var requestedComponent = manifest.Local.FirstOrDefault(c => 
+            var requestedComponent = _manifestService.Local.FirstOrDefault(c => 
                 c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
                 && c.Version == requestedVersion);
 
@@ -55,7 +54,7 @@ public class RemoveVerb(RootCommand rootCommand)
                 return;
             }
 
-            var dependencyTree = new DependencyTree(manifest.Local);
+            var dependencyTree = new DependencyTree(_manifestService.Local);
             var reverseDependencies = 
                 dependencyTree.GetReverseDependencies(requestedComponent.Key);
 
@@ -76,15 +75,16 @@ public class RemoveVerb(RootCommand rootCommand)
                 }
             }
 
-            await requestedComponent.Uninstall(manifest);
+            await requestedComponent.Uninstall(_manifestService);
             foreach (var reverseDependency in reverseDependencies)
             {
-                await reverseDependency.Uninstall(manifest);
+                await reverseDependency.Uninstall(_manifestService);
             }
 
             return;
         }
 
-        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", Manifest.DotnetInstallLocation);
+        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist",
+            _manifestService.DotnetInstallLocation);
     }
 }

@@ -1,17 +1,22 @@
 ﻿using System.CommandLine;
 using Dotnet.Installer.Core.Models;
+using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
 
 namespace Dotnet.Installer.Console.Verbs;
 
-public class InstallVerb(RootCommand rootCommand)
+public class InstallCommand : Command
 {
-    private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
+    private readonly IManifestService _manifestService;
+    private readonly ILimitsService _limitsService;
 
-    public void Initialize()
+    public InstallCommand(IManifestService manifestService, ILimitsService limitsService)
+        : base("install", "Installs a new .NET component in the system")
     {
-        var installVerb = new Command("install", "Installs a new .NET component in the system");
+        _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _limitsService = limitsService ?? throw new ArgumentNullException(nameof(limitsService));
+
         var componentArgument = new Argument<string>(
             name: "component",
             description: "The .NET component name to be installed (dotnet-runtime, aspnetcore-runtime, runtime, sdk).",
@@ -22,31 +27,29 @@ public class InstallVerb(RootCommand rootCommand)
             description: "The .NET component version to be installed (version or latest).",
             getDefaultValue: () => "latest"
         );
-        installVerb.AddArgument(componentArgument);
-        installVerb.AddArgument(versionArgument);
+        AddArgument(componentArgument);
+        AddArgument(versionArgument);
 
-        installVerb.SetHandler(Handle, componentArgument, versionArgument);
-
-        _rootCommand.Add(installVerb);
+        this.SetHandler(Handle, componentArgument, versionArgument);
     }
 
-    private static async Task Handle(string component, string version)
+    private async Task Handle(string component, string version)
     {
-        if (Directory.Exists(Manifest.DotnetInstallLocation))
+        if (Directory.Exists(_manifestService.DotnetInstallLocation))
         {
-            var manifest = await Manifest.Initialize(includeArchive: true);
+            await _manifestService.Initialize(includeArchive: true);
             
             var requestedComponent = default(Component);
             switch (version)
             {
                 case "latest":
-                    requestedComponent = manifest.Remote
+                    requestedComponent = _manifestService.Remote
                         .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                         .OrderByDescending(c => c.Version)
                         .FirstOrDefault();
                     break;
                 default:
-                    requestedComponent = manifest.Remote.FirstOrDefault(c => 
+                    requestedComponent = _manifestService.Remote.FirstOrDefault(c => 
                         c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
                         && c.Version == DotnetVersion.Parse(version));
                     break;
@@ -67,12 +70,13 @@ public class InstallVerb(RootCommand rootCommand)
                     requestedComponent.InstallingPackageChanged += (sender, package) =>
                         context.Status($"Installing {package.Name}");
 
-                    await requestedComponent.Install(manifest);
+                    await requestedComponent.Install(_manifestService, _limitsService);
                 });
 
             return;
         }
 
-        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", Manifest.DotnetInstallLocation);
+        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", 
+            _manifestService.DotnetInstallLocation);
     }
 }

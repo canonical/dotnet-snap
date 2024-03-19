@@ -1,5 +1,8 @@
 ﻿using System.CommandLine;
 using Dotnet.Installer.Console.Verbs;
+using Dotnet.Installer.Core.Services.Contracts;
+using Dotnet.Installer.Core.Services.Implementations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Dotnet.Installer.Console;
 
@@ -7,17 +10,25 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        var rootCommand = new RootCommand(".NET command-line installer tool");
+        var serviceProvider = new ServiceCollection()
+            .AddSingleton<IFileService, FileService>()
+            .AddSingleton<IManifestService, ManifestService>()
+            .AddSingleton<ILimitsService, LimitsService>()
+            .AddSingleton(serviceProvider =>
+            {
+                var manifestService = serviceProvider.GetRequiredService<IManifestService>();
+                var limitsService = serviceProvider.GetRequiredService<ILimitsService>();
+                return new RootCommand(".NET Installer command-line tool")
+                {
+                    new ListCommand(manifestService),
+                    new InstallCommand(manifestService, limitsService),
+                    new RemoveCommand(manifestService),
+                    new UpdateCommand(manifestService, limitsService)
+                };
+            })
+            .BuildServiceProvider();
 
-        // Verbs
-        var installVerb = new InstallVerb(rootCommand);
-        installVerb.Initialize();
-        var updateVerb = new UpdateVerb(rootCommand);
-        updateVerb.Initialize();
-        var removeVerb = new RemoveVerb(rootCommand);
-        removeVerb.Initialize();
-        var listVerb = new ListVerb(rootCommand);
-        listVerb.Initialize();
+        var rootCommand = serviceProvider.GetRequiredService<RootCommand>();
 
         await rootCommand.InvokeAsync(args);
     }

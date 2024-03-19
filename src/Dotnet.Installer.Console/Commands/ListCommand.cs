@@ -1,34 +1,34 @@
-﻿using Dotnet.Installer.Core.Models;
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.Text;
 using Spectre.Console;
+using Dotnet.Installer.Core.Services.Contracts;
 
 namespace Dotnet.Installer.Console.Verbs;
 
-public class ListVerb(RootCommand rootCommand)
+public class ListCommand : Command
 {
-    private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
+    private readonly IManifestService _manifestService;
 
-    public void Initialize()
+    public ListCommand(IManifestService manifestService) : base("list", "List installed and available .NET versions")
     {
+        _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+
         var listVerb = new Command("list", "List installed and available .NET versions");
         var allOption = new Option<bool>(
             name: "--all",
             description: "Includes past .NET versions available to install"
         );
-        listVerb.AddOption(allOption);
 
-        listVerb.SetHandler(Handle, allOption);
-
-        _rootCommand.Add(listVerb);
+        AddOption(allOption);
+        this.SetHandler(Handle, allOption);
     }
 
-    private static async Task Handle(bool allOption)
+    private async Task Handle(bool allOption)
     {
-        var manifest = await Manifest.Initialize(includeArchive: allOption);
+        await _manifestService.Initialize(includeArchive: allOption);
         var tree = new Tree("Available Components");
 
-        foreach (var versionGroup in manifest.Merged.GroupBy(c => c.Version.Major))
+        foreach (var versionGroup in _manifestService.Merged.GroupBy(c => c.Version.Major))
         {
             var majorVersionNode = tree.AddNode($".NET {versionGroup.Key}");
             
