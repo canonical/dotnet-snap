@@ -1,11 +1,12 @@
-﻿using CliWrap;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using CliWrap;
+using Dotnet.Installer.Core.Models;
 
-namespace Dotnet.Installer.Core.Models;
+namespace Dotnet.Installer.Core.Services.Implementations;
 
-public partial class Manifest
+public partial class ManifestService
 {
     private static readonly string LocalManifestPath = 
         Path.Join(Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR"), "manifest.json");

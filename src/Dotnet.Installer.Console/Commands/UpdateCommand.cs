@@ -1,16 +1,23 @@
 using System.CommandLine;
 using Dotnet.Installer.Core.Models;
+using Dotnet.Installer.Core.Services.Contracts;
 using Spectre.Console;
 
-namespace Dotnet.Installer.Console.Verbs;
+namespace Dotnet.Installer.Console.Commands;
 
-public class UpdateVerb(RootCommand rootCommand)
+public class UpdateCommand : Command
 {
-    private readonly RootCommand _rootCommand = rootCommand ?? throw new ArgumentNullException(nameof(rootCommand));
+    private readonly IFileService _fileService;
+    private readonly ILimitsService _limitsService;
+    private readonly IManifestService _manifestService;
 
-    public void Initialize()
+    public UpdateCommand(IFileService fileService, ILimitsService limitsService, IManifestService manifestService)
+        : base("update", "Updates a .NET component in the system")
     {
-        var updateVerb = new Command("update", "Updates a .NET component in the system");
+        _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
+        _limitsService = limitsService ?? throw new ArgumentNullException(nameof(limitsService));
+        _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+
         var componentArgument = new Argument<string>(
             name: "component",
             description: "The .NET component name to be updated (dotnet-runtime, aspnetcore-runtime, runtime, sdk).")
@@ -21,12 +28,10 @@ public class UpdateVerb(RootCommand rootCommand)
             name: "--all",
             description: "Updates all components with updates available."
         );
-        updateVerb.AddArgument(componentArgument);
-        updateVerb.AddOption(allOption);
+        AddArgument(componentArgument);
+        AddOption(allOption);
 
-        updateVerb.SetHandler(Handle, componentArgument, allOption);
-
-        _rootCommand.Add(updateVerb);
+        this.SetHandler(Handle, componentArgument, allOption);
     }
 
     private async Task Handle(string componentArgument, bool allOption)
@@ -38,13 +43,13 @@ public class UpdateVerb(RootCommand rootCommand)
             return;
         }
 
-        if (Directory.Exists(Manifest.DotnetInstallLocation))
+        if (Directory.Exists(_manifestService.DotnetInstallLocation))
         {
-            var manifest = await Manifest.Initialize();
+            await _manifestService.Initialize();
 
             // Components with updates have the same major version and occur more than once
             var componentsWithUpdates = new List<Component>();
-            var majorVersionGroups = manifest.Merged
+            var majorVersionGroups = _manifestService.Merged
                 .GroupBy(c => c.Version.Major);
 
             foreach (var group in majorVersionGroups)
@@ -93,8 +98,8 @@ public class UpdateVerb(RootCommand rootCommand)
                             context.Status(
                                 $"Updating {toUninstall.Name} from {toUninstall.Version} to {toInstall.Version}...");
 
-                            await toUninstall.Uninstall(manifest);
-                            await toInstall.Install(manifest);
+                            await toUninstall.Uninstall(_fileService, _manifestService);
+                            await toInstall.Install(_fileService, _limitsService, _manifestService);
 
                             context.Status("[green]Update complete :check_mark_button:[/]");
                         }

@@ -1,36 +1,36 @@
 ﻿using System.Runtime.InteropServices;
-using Dotnet.Installer.Core.Helpers;
+using Dotnet.Installer.Core.Exceptions;
+using Dotnet.Installer.Core.Models.Events;
+using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Models;
 
 public class Component
 {
-    public required string Key { get; set; }
-    public required string Name { get; set; }
-    public required string Description { get; set; }
-    public required Uri BaseUrl { get; set; }
-    public required DotnetVersion Version { get; set; }
-    public required IEnumerable<Package> Packages { get; set; }
-    public required IEnumerable<string> Dependencies { get; set; }
+    public required string Key { get; init; }
+    public required string Name { get; init; }
+    public required string Description { get; init; }
+    public required Uri BaseUrl { get; init; }
+    public required DotnetVersion Version { get; init; }
+    public required IEnumerable<Package> Packages { get; init; }
+    public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
 
-    public event EventHandler? InstallationStarted;
-    public event EventHandler? InstallationFinished;
-    public event EventHandler<Package>? InstallingPackageChanged;
+    public event EventHandler<InstallationStartedEventArgs>? InstallationStarted;
+    public event EventHandler<InstallationFinishedEventArgs>? InstallationFinished;
+    public event EventHandler<InstallingPackageChangedEventArgs>? InstallingPackageChanged;
 
-    private async Task<bool> CanInstall()
+    private bool CanInstall(ILimitsService limitsService)
     {
-        var limits = await Limits.Load();
-
         if (Version.IsRuntime)
         {
-            return Version <= limits.Runtime;
+            return Version <= limitsService.Runtime;
         }
 
         if (Version.IsSdk)
         {
-            var limitOnFeatureBand = limits.Sdk
+            var limitOnFeatureBand = limitsService.Sdk
                 .First(v => v.FeatureBand == Version.FeatureBand);
 
             return Version <= limitOnFeatureBand;
@@ -39,7 +39,10 @@ public class Component
         return false;
     }
 
-    public async Task Install(Manifest manifest)
+    public async Task Install(
+        IFileService fileService,
+        ILimitsService limitsService,
+        IManifestService manifestService)
     {
         // TODO: Double-check architectures from Architecture enum
         var architecture = RuntimeInformation.OSArchitecture switch
@@ -49,46 +52,45 @@ public class Component
             _ => throw new InvalidOperationException("Unsupported architecture")
         };
 
-        if (!await CanInstall())
+        if (!CanInstall(limitsService))
         {
-            Console.WriteLine("The component {0} {1} cannot be installed.", Name, Version);
-            return;
+            throw new VersionTooHighException($"The component {Name} {Version} cannot be installed.");
         }
 
         if (Installation is null)
         {
-            InstallationStarted?.Invoke(this, EventArgs.Empty);
+            InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
 
             // If this component already has a previous version installed
             // within the major version/feature band group, uninstall it.
-            var previousComponent = manifest.Local
+            var previousComponent = manifestService.Local
                 .FirstOrDefault(c => c.Name.Equals(Name, StringComparison.CurrentCultureIgnoreCase)
                     && c.Version.IsRuntime ? c.Version < Version :
                         c.Version.FeatureBand == Version.FeatureBand && c.Version < Version);
 
             if (previousComponent is not null)
             {
-                await previousComponent.Uninstall(manifest);
+                await previousComponent.Uninstall(fileService, manifestService);
             }
             
             // Install component packages
             foreach (var package in Packages)
             {
-                InstallingPackageChanged?.Invoke(this, package);
+                InstallingPackageChanged?.Invoke(this, new InstallingPackageChangedEventArgs(package));
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
-                var filePath = await FileHandler.DownloadFile(debUrl, Manifest.DotnetInstallLocation);
+                var filePath = await fileService.DownloadFile(debUrl, manifestService.DotnetInstallLocation);
 
-                await FileHandler.ExtractDeb(filePath, Manifest.DotnetInstallLocation);
+                await fileService.ExtractDeb(filePath, manifestService.DotnetInstallLocation);
 
-                File.Delete(filePath);
+                fileService.DeleteFile(filePath);
             }
 
             // Register the installation of this component in the local manifest file
-            await manifest.Add(this);
+            await manifestService.Add(this);
             
-            InstallationFinished?.Invoke(this, EventArgs.Empty);
+            InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
         }
         else
         {
@@ -97,38 +99,39 @@ public class Component
         
         foreach (var dependency in Dependencies)
         {
-            var component = manifest.Remote.First(c => c.Key == dependency);
-            await component.Install(manifest);
+            var component = manifestService.Remote.First(c => c.Key == dependency);
+            await component.Install(fileService, limitsService, manifestService);
         }
     }
 
-    public async Task Uninstall(Manifest manifest)
+    public async Task Uninstall(IFileService fileService, IManifestService manifestService)
     {
         if (Installation is not null)
         {
             foreach (var package in Packages)
             {
-                var registrationFileName = Path.Combine(Manifest.DotnetInstallLocation, $"{package.Name}.files");
+                var registrationFileName = Path.Combine(manifestService.DotnetInstallLocation, 
+                    $"{package.Name}.files");
 
-                if (!File.Exists(registrationFileName))
+                if (!fileService.FileExists(registrationFileName))
                 {
                     throw new ApplicationException("Registration file does not exist!");
                 }
 
-                var files = await File.ReadAllLinesAsync(registrationFileName);
+                var files = await fileService.ReadAllLines(registrationFileName);
                 foreach (var file in files)
                 {
-                    File.Delete(file);
+                    fileService.DeleteFile(file);
                 }
 
-                File.Delete(registrationFileName);
+                fileService.DeleteFile(registrationFileName);
             }
 
             // Check for any empty directories
-            DirectoryHandler.RemoveEmptyDirectories(Manifest.DotnetInstallLocation);
+            fileService.RemoveEmptyDirectories(manifestService.DotnetInstallLocation);
 
             Installation = null;
-            await manifest.Remove(this);
+            await manifestService.Remove(this);
         }
     }
 }
