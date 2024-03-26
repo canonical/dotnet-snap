@@ -1,5 +1,6 @@
 ﻿using System.CommandLine;
 using System.Text;
+using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 using Spectre.Console;
 
@@ -25,49 +26,57 @@ public class ListCommand : Command
 
     private async Task Handle(bool allOption)
     {
-        await _manifestService.Initialize(includeArchive: allOption);
-        var tree = new Tree("Available Components");
-
-        foreach (var versionGroup in _manifestService.Merged.GroupBy(c => c.Version.Major))
+        try
         {
-            var majorVersionNode = tree.AddNode($".NET {versionGroup.Key}");
-            
-            foreach (var componentGroup in versionGroup.GroupBy(c => c.Name))
+            await _manifestService.Initialize(includeArchive: allOption);
+            var tree = new Tree("Available Components");
+
+            foreach (var versionGroup in _manifestService.Merged.GroupBy(c => c.Version.Major))
             {
-                var stringBuilder = new StringBuilder();
-
-                stringBuilder.Append($"{componentGroup.Last().Description}:");
-
-                var orderedComponents = componentGroup
-                    .OrderBy(c => c.Version)
-                    .ToList();
-
-                var componentHasPreviousVersionInstalled = false;
-                foreach (var component in orderedComponents)
-                {
-                    if (component.Installation is not null)
-                    {
-                        componentHasPreviousVersionInstalled = true;
-                        stringBuilder.Append($" [[{component.Version}");
-                        stringBuilder.Append(" [bold green]Installed :check_mark_button:[/]");
-                        stringBuilder.Append("]]");
-                    }
-                    else if (component.Installation is null && orderedComponents.Count > 1 && componentHasPreviousVersionInstalled)
-                    {
-                        stringBuilder.Append($" \u2192 [[{component.Version}");
-                        stringBuilder.Append(" [bold yellow]Update available![/]");
-                        stringBuilder.Append("]]");
-                    }
-                    else
-                    {
-                        stringBuilder.Append($" [[{component.Version}]]");
-                    }
-                }
+                var majorVersionNode = tree.AddNode($".NET {versionGroup.Key}");
                 
-                majorVersionNode.AddNode(stringBuilder.ToString());
+                foreach (var componentGroup in versionGroup.GroupBy(c => c.Name))
+                {
+                    var stringBuilder = new StringBuilder();
+
+                    stringBuilder.Append($"{componentGroup.Last().Description}:");
+
+                    var orderedComponents = componentGroup
+                        .OrderBy(c => c.Version)
+                        .ToList();
+
+                    var componentHasPreviousVersionInstalled = false;
+                    foreach (var component in orderedComponents)
+                    {
+                        if (component.Installation is not null)
+                        {
+                            componentHasPreviousVersionInstalled = true;
+                            stringBuilder.Append($" [[{component.Version}");
+                            stringBuilder.Append(" [bold green]Installed :check_mark_button:[/]");
+                            stringBuilder.Append("]]");
+                        }
+                        else if (component.Installation is null && orderedComponents.Count > 1 && componentHasPreviousVersionInstalled)
+                        {
+                            stringBuilder.Append($" \u2192 [[{component.Version}");
+                            stringBuilder.Append(" [bold yellow]Update available![/]");
+                            stringBuilder.Append("]]");
+                        }
+                        else
+                        {
+                            stringBuilder.Append($" [[{component.Version}]]");
+                        }
+                    }
+                    
+                    majorVersionNode.AddNode(stringBuilder.ToString());
+                }
             }
+            
+            AnsiConsole.Write(tree);
         }
-        
-        AnsiConsole.Write(tree);
+        catch (ExceptionBase ex)
+        {
+            System.Console.Error.WriteLine("ERROR: " + ex.Message);
+            Environment.Exit((int)ex.ErrorCode);
+        }
     }
 }

@@ -49,12 +49,13 @@ public class Component
         {
             Architecture.X64 => "amd64",
             Architecture.Arm64 => "arm64",
-            _ => throw new InvalidOperationException("Unsupported architecture")
+            _ => throw new UnsupportedArchitectureException(RuntimeInformation.OSArchitecture)
         };
 
         if (!CanInstall(limitsService))
         {
-            throw new VersionTooHighException($"The component {Name} {Version} cannot be installed.");
+            throw new VersionTooHighException(this,
+                Version.IsRuntime ? limitsService.Runtime : limitsService.Sdk.First(v => v.FeatureBand == Version.FeatureBand));
         }
 
         if (Installation is null)

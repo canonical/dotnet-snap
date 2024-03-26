@@ -1,5 +1,6 @@
 ﻿using System.CommandLine;
 using System.Text;
+using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
@@ -41,53 +42,62 @@ public class RemoveCommand : Command
 
     private async Task Handle(string component, string version, bool yesOption)
     {
-        if (Directory.Exists(_manifestService.DotnetInstallLocation))
+        try
         {
-            await _manifestService.Initialize();
-
-            var requestedVersion = DotnetVersion.Parse(version);
-            var requestedComponent = _manifestService.Local.FirstOrDefault(c => 
-                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
-                && c.Version == requestedVersion);
-
-            if (requestedComponent is null)
+            if (Directory.Exists(_manifestService.DotnetInstallLocation))
             {
-                System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
-                    component, version);
+                await _manifestService.Initialize();
+
+                var requestedVersion = DotnetVersion.Parse(version);
+                var requestedComponent = _manifestService.Local.FirstOrDefault(c => 
+                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
+                    && c.Version == requestedVersion);
+
+                if (requestedComponent is null)
+                {
+                    System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
+                        component, version);
+                    Environment.Exit(-1);
+                }
+
+                var dependencyTree = new DependencyTree(_manifestService.Local);
+                var reverseDependencies = 
+                    dependencyTree.GetReverseDependencies(requestedComponent.Key);
+
+                if (reverseDependencies.Count != 0 && !yesOption)
+                {
+                    var confirmationPrompt = new StringBuilder();
+                    confirmationPrompt.AppendLine("This will also remove:");
+                    foreach (var reverseDependency in reverseDependencies)
+                    {
+                        confirmationPrompt.AppendLine($"\t* {reverseDependency.Key}");
+                    }
+
+                    confirmationPrompt.AppendLine("Continue?");
+
+                    if (!AnsiConsole.Confirm(confirmationPrompt.ToString(), defaultValue: false))
+                    {
+                        return;
+                    }
+                }
+
+                await requestedComponent.Uninstall(_fileService, _manifestService);
+                foreach (var reverseDependency in reverseDependencies)
+                {
+                    await reverseDependency.Uninstall(_fileService, _manifestService);
+                }
+
                 return;
             }
 
-            var dependencyTree = new DependencyTree(_manifestService.Local);
-            var reverseDependencies = 
-                dependencyTree.GetReverseDependencies(requestedComponent.Key);
-
-            if (reverseDependencies.Count != 0 && !yesOption)
-            {
-                var confirmationPrompt = new StringBuilder();
-                confirmationPrompt.AppendLine("This will also remove:");
-                foreach (var reverseDependency in reverseDependencies)
-                {
-                    confirmationPrompt.AppendLine($"\t* {reverseDependency.Key}");
-                }
-
-                confirmationPrompt.AppendLine("Continue?");
-
-                if (!AnsiConsole.Confirm(confirmationPrompt.ToString(), defaultValue: false))
-                {
-                    return;
-                }
-            }
-
-            await requestedComponent.Uninstall(_fileService, _manifestService);
-            foreach (var reverseDependency in reverseDependencies)
-            {
-                await reverseDependency.Uninstall(_fileService, _manifestService);
-            }
-
-            return;
+            System.Console.Error.WriteLine("ERROR: The directory {0} does not exist",
+                _manifestService.DotnetInstallLocation);
+            Environment.Exit(-1);
         }
-
-        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist",
-            _manifestService.DotnetInstallLocation);
+        catch (ExceptionBase ex)
+        {
+            System.Console.Error.WriteLine("ERROR: " + ex.Message);
+            Environment.Exit((int)ex.ErrorCode);
+        }
     }
 }
