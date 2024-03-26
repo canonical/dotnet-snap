@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using CliWrap;
+using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
@@ -26,7 +27,7 @@ public class FileService : IFileService
         }
         catch (UnauthorizedAccessException)
         {
-            await Console.Error.WriteLineAsync("ERROR: Unauthorized access. Maybe run with sudo?");
+            throw new NeedsSudoException(fileName);
         }
 
         return fileName;

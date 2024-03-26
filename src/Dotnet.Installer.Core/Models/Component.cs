@@ -54,7 +54,8 @@ public class Component
 
         if (!CanInstall(limitsService))
         {
-            throw new VersionTooHighException($"The component {Name} {Version} cannot be installed.");
+            throw new VersionTooHighException(this,
+                Version.IsRuntime ? limitsService.Runtime : limitsService.Sdk.First(v => v.FeatureBand == Version.FeatureBand));
         }
 
         if (Installation is null)

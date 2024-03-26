@@ -1,5 +1,5 @@
 ﻿using System.CommandLine;
-using Dotnet.Installer.Core.Models;
+using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
@@ -37,42 +37,51 @@ public class InstallCommand : Command
 
     private async Task Handle(string component, string version)
     {
-        if (Directory.Exists(_manifestService.DotnetInstallLocation))
+        try
         {
-            await _manifestService.Initialize(includeArchive: true);
-
-            var requestedComponent = version switch
+            if (Directory.Exists(_manifestService.DotnetInstallLocation))
             {
-                "latest" => _manifestService.Remote
-                    .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                    .MaxBy(c => c.Version),
-                _ => _manifestService.Remote.FirstOrDefault(c =>
-                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase) &&
-                    c.Version == DotnetVersion.Parse(version))
-            };
+                await _manifestService.Initialize(includeArchive: true);
 
-            if (requestedComponent is null)
-            {
-                System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
-                    component, version);
+                var requestedComponent = version switch
+                {
+                    "latest" => _manifestService.Remote
+                        .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                        .MaxBy(c => c.Version),
+                    _ => _manifestService.Remote.FirstOrDefault(c =>
+                        c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase) &&
+                        c.Version == DotnetVersion.Parse(version))
+                };
+
+                if (requestedComponent is null)
+                {
+                    System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
+                        component, version);
+                    return;
+                }
+
+                await AnsiConsole
+                    .Status()
+                    .Spinner(Spinner.Known.Dots12)
+                    .StartAsync("Thinking...", async context =>
+                    {
+                        requestedComponent.InstallingPackageChanged += (sender, args) =>
+                            context.Status($"Installing {args.Package.Name}");
+
+                        await requestedComponent.Install(_fileService, _limitsService, _manifestService);
+                    });
+
                 return;
             }
 
-            await AnsiConsole
-                .Status()
-                .Spinner(Spinner.Known.Dots12)
-                .StartAsync("Thinking...", async context =>
-                {
-                    requestedComponent.InstallingPackageChanged += (sender, args) =>
-                        context.Status($"Installing {args.Package.Name}");
-
-                    await requestedComponent.Install(_fileService, _limitsService, _manifestService);
-                });
-
-            return;
+            System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", 
+                _manifestService.DotnetInstallLocation);
+            Environment.Exit(-1);
         }
-
-        System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", 
-            _manifestService.DotnetInstallLocation);
+        catch (ExceptionBase ex)
+        {
+            System.Console.Error.WriteLine("ERROR: " + ex.Message);
+            Environment.Exit((int)ex.ErrorCode);
+        }
     }
 }
