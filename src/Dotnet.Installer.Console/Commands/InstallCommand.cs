@@ -57,7 +57,7 @@ public class InstallCommand : Command
                 {
                     System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
                         component, version);
-                    return;
+                    Environment.Exit(-1);
                 }
 
                 await AnsiConsole

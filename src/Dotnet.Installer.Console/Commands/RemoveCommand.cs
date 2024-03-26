@@ -57,7 +57,7 @@ public class RemoveCommand : Command
                 {
                     System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
                         component, version);
-                    return;
+                    Environment.Exit(-1);
                 }
 
                 var dependencyTree = new DependencyTree(_manifestService.Local);
