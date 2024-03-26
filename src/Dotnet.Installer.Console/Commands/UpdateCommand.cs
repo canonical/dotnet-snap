@@ -95,8 +95,8 @@ public class UpdateCommand : Command
                                     continue;
                                 }
                                 
-                                toInstall.InstallingPackageChanged += (sender, package) =>
-                                    AnsiConsole.WriteLine($"Installing {package}");
+                                toInstall.InstallingPackageChanged += (sender, args) =>
+                                    AnsiConsole.WriteLine($"Installing {args.Package.Name}");
 
                                 context.Status(
                                     $"Updating {toUninstall.Name} from {toUninstall.Version} to {toInstall.Version}...");

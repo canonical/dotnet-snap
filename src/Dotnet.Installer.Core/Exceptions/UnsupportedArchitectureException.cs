@@ -1,7 +1,6 @@
 ﻿using System.Runtime.InteropServices;
-using Dotnet.Installer.Core.Exceptions;
 
-namespace Dotnet.Installer.Core;
+namespace Dotnet.Installer.Core.Exceptions;
 
 public class UnsupportedArchitectureException(Architecture architecture)
     : ExceptionBase(Error.UnsupportedArchitecture)
