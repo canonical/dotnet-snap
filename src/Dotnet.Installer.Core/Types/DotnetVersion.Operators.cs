@@ -18,12 +18,14 @@ public partial class DotnetVersion
         if (other.IsPreview && IsRc) return 1;
         if (other.IsRc && IsPreview) return -1;
 
-        return IsStable switch
-        {
-            true when !other.IsStable => 1,
-            false when other.IsStable => -1,
-            _ => 0
-        };
+        if (IsStable && !other.IsStable) return 1;
+        if (!IsStable && other.IsStable) return -1;
+
+        // It will come down to revisions then
+        if (Revision.HasValue && !other.Revision.HasValue) return 1;
+        else if (!Revision.HasValue && other.Revision.HasValue) return -1;
+        else if (!Revision.HasValue && !other.Revision.HasValue) return 0;
+        else return Revision!.Value - other.Revision!.Value;
     }
 
     public static bool operator <(DotnetVersion lhs, DotnetVersion rhs) => lhs.CompareTo(rhs) < 0;

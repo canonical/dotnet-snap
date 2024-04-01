@@ -8,7 +8,7 @@ namespace Dotnet.Installer.Core.Types;
 public partial class DotnetVersion : IEquatable<DotnetVersion>, IComparable<DotnetVersion>
 {
     public DotnetVersion(int major, int minor, int patch, bool isPreview = false, bool isRc = false,
-        int? previewIdentifier = null)
+        int? previewIdentifier = null, int? revision = null)
     {
         if (isPreview && isRc)
         {
@@ -26,6 +26,12 @@ public partial class DotnetVersion : IEquatable<DotnetVersion>, IComparable<Dotn
             throw new ApplicationException(
                 "You can't specify a Preview Identifier if the version is neither a preview or an RC.");
         }
+
+        if (revision.HasValue && revision.Value == 0)
+        {
+            throw new ApplicationException(
+                "A revision can only contain a value starting with 1, null otherwise.");
+        }
         
         Major = major;
         Minor = minor;
@@ -35,6 +41,8 @@ public partial class DotnetVersion : IEquatable<DotnetVersion>, IComparable<Dotn
         IsRc = isRc;
 
         PreviewIdentifier = previewIdentifier;
+
+        Revision = revision;
     }
     
     public int Major { get; }
@@ -45,6 +53,8 @@ public partial class DotnetVersion : IEquatable<DotnetVersion>, IComparable<Dotn
     public bool IsRc { get; private set; }
     public bool IsStable => !IsPreview && !IsRc;
     public int? PreviewIdentifier { get; private set; } = null;
+
+    public int? Revision { get; set; }
     
     public bool IsRuntime => Patch < 100;
     public bool IsSdk => !IsRuntime;
@@ -53,7 +63,14 @@ public partial class DotnetVersion : IEquatable<DotnetVersion>, IComparable<Dotn
 
     public static DotnetVersion Parse(string version)
     {
-        var previewSplit = version.Split('-');
+        int? revision = default;
+        var revisionSplit = version.Split('+');
+        if (revisionSplit.Length > 1)
+        {
+            revision = int.Parse(revisionSplit[1]);
+        }
+
+        var previewSplit = revisionSplit[0].Split('-');
         var versionSections = previewSplit[0].Split('.');
         var parsedVersion = new DotnetVersion
         (
@@ -77,25 +94,30 @@ public partial class DotnetVersion : IEquatable<DotnetVersion>, IComparable<Dotn
 
             parsedVersion.PreviewIdentifier = int.Parse(previewVersionSections[1]);
         }
+
+        parsedVersion.Revision = revision;
         
         return parsedVersion;
     }
 
     public override string ToString()
     {
-        var versionSb = new StringBuilder();
+        var versionBuilder = new StringBuilder();
         
-        versionSb.Append(Major);
-        versionSb.Append('.');
-        versionSb.Append(Minor);
-        versionSb.Append('.');
-        versionSb.Append(Patch);
+        versionBuilder.Append(Major);
+        versionBuilder.Append('.');
+        versionBuilder.Append(Minor);
+        versionBuilder.Append('.');
+        versionBuilder.Append(Patch);
 
-        if (IsPreview) versionSb.Append("-preview.");
-        if (IsRc) versionSb.Append("-rc.");
+        if (IsPreview) versionBuilder.Append("-preview.");
+        if (IsRc) versionBuilder.Append("-rc.");
 
-        versionSb.Append(PreviewIdentifier.ToString());
+        versionBuilder.Append(PreviewIdentifier.ToString());
 
-        return versionSb.ToString();
+        if (Revision is not null) versionBuilder.Append('+');
+        versionBuilder.Append(Revision.ToString());
+
+        return versionBuilder.ToString();
     }
 }
