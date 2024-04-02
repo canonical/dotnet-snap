@@ -44,10 +44,25 @@ public partial class DotnetVersion
         if (GetType() != other.GetType()) return false;
 
         return (Major == other.Major) && (Minor == other.Minor) && (Patch == other.Patch) &&
-               (IsPreview == other.IsPreview) && (IsRc == other.IsRc) && (PreviewIdentifier == other.PreviewIdentifier);
+               (IsPreview == other.IsPreview) && (IsRc == other.IsRc) && (PreviewIdentifier == other.PreviewIdentifier) &&
+               (Revision == other.Revision);
     }
 
-    public override int GetHashCode() => (Major, Minor, Patch).GetHashCode();
+    public override int GetHashCode()
+    {
+        unchecked // Overflow is fine, just wrap
+        {
+            int hash = 17;
+            hash = hash * 23 + Major.GetHashCode();
+            hash = hash * 23 + Minor.GetHashCode();
+            hash = hash * 23 + Patch.GetHashCode();
+            hash = hash * 23 + IsPreview.GetHashCode();
+            hash = hash * 23 + IsRc.GetHashCode();
+            hash = hash * 23 + (PreviewIdentifier?.GetHashCode() ?? 0);
+            hash = hash * 23 + (Revision?.GetHashCode() ?? 0);
+            return hash;
+        }
+    }
 
     public static bool operator ==(DotnetVersion? lhs, DotnetVersion? rhs)
     {

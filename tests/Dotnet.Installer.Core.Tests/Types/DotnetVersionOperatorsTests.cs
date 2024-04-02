@@ -113,16 +113,24 @@ public class DotnetVersionOperatorsTests
         
         var version3 = new DotnetVersion(8, 0, 102);
         var version4 = new DotnetVersion(8, 0, 104);
+
+        var version5 = new DotnetVersion(8, 0, 102, revision: 1);
+        var version6 = new DotnetVersion(8, 0, 102, revision: null);
         
         // Act
         var result1 = version1.Equals(version2);
         var result2 = version3.Equals(version4);
+        var result3 = version5.Equals(version6);
         
         // Assert
         Assert.False(result1);
         Assert.False(result2);
+        Assert.False(result3);
+
         Assert.False(version1 == version2);
         Assert.False(version3 == version4);
+        Assert.False(version5 == version6);
+
         Assert.False(version1.Equals(null));
     }
 
@@ -141,5 +149,48 @@ public class DotnetVersionOperatorsTests
         // Assert
         Assert.False(result1);
         Assert.True(result2);
+    }
+
+    [Theory]
+    [InlineData(8, 0, 0, false, true, 2, null)]
+    public void GetHashCode_WithEqualObjects_ShouldReturnTheSame(int major, int minor, int patch,
+        bool isPreview, bool isRc, int? previewIdentifier, int? revision)
+    {
+        // Arrange
+        var version1 = new DotnetVersion(major, minor, patch, isPreview, isRc, previewIdentifier, revision);
+        var version2 = new DotnetVersion(major, minor, patch, isPreview, isRc, previewIdentifier, revision);
+
+        // Act
+        var hash1 = version1.GetHashCode();
+        var hash2 = version2.GetHashCode();
+
+        // Assert
+        Assert.Equal(hash1, hash2);
+        Assert.True(version1 == version2);
+    }
+
+    [Fact]
+    public void GetHashCode_WithDifferentObjects_ShouldReturnDifferentHashes()
+    {
+        // Arrange
+        var version1 = new DotnetVersion(8, 0, 0);
+        var version2 = new DotnetVersion(8, 0, 0, revision: 1);
+
+        var version3 = new DotnetVersion(8, 0, 100, true, false, 2);
+        var version4 = new DotnetVersion(8, 0, 3, revision: 1);
+
+        // Act
+        var hash1 = version1.GetHashCode();
+        var hash2 = version2.GetHashCode();
+
+        var hash3 = version3.GetHashCode();
+        var hash4 = version4.GetHashCode();
+
+        // Assert
+        Assert.NotEqual(hash1, hash2);
+        Assert.NotEqual(hash3, hash4);
+
+        Assert.False(version1 == version2);
+        Assert.False(version3 == version4);
     }
 }
