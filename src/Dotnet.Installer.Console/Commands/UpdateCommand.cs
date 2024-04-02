@@ -27,8 +27,7 @@ public class UpdateCommand : Command
             };
         var allOption = new Option<bool>(
             name: "--all",
-            description: "Updates all components with updates available."
-        );
+            description: "Updates all components with updates available.");
         AddArgument(componentArgument);
         AddOption(allOption);
 
@@ -101,8 +100,8 @@ public class UpdateCommand : Command
                                 context.Status(
                                     $"Updating {toUninstall.Name} from {toUninstall.Version} to {toInstall.Version}...");
 
-                                await toUninstall.Uninstall(_fileService, _manifestService);
                                 await toInstall.Install(_fileService, _limitsService, _manifestService);
+                                await toUninstall.Uninstall(_fileService, _manifestService);
 
                                 context.Status("[green]Update complete :check_mark_button:[/]");
                             }
