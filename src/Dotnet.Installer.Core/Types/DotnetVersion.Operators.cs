@@ -48,6 +48,28 @@ public partial class DotnetVersion
                (Revision == other.Revision);
     }
 
+    public bool Equals(DotnetVersion? other, DotnetVersionComparison comparisonType)
+        => Equals(this, other, comparisonType);
+
+    public static bool Equals(DotnetVersion? rhs, DotnetVersion? lhs,
+        DotnetVersionComparison comparisonType = DotnetVersionComparison.Default)
+    {
+        if (rhs is null || lhs is null) return rhs == lhs;
+
+        return comparisonType switch
+        {
+            DotnetVersionComparison.IgnoreRevision =>
+                (lhs.Major == rhs.Major) &&
+                (lhs.Minor == rhs.Minor) &&
+                (lhs.Patch == rhs.Patch) &&
+                (lhs.IsPreview == rhs.IsPreview) &&
+                (lhs.IsRc == rhs.IsRc) &&
+                (lhs.PreviewIdentifier == rhs.PreviewIdentifier),
+
+            _ => rhs.Equals(lhs),
+        };
+    }
+
     public override int GetHashCode()
     {
         unchecked // Overflow is fine, just wrap

@@ -151,6 +151,77 @@ public class DotnetVersionOperatorsTests
         Assert.True(result2);
     }
 
+    [Fact]
+    public void StaticEquals_WithOneVersionNull_ShouldCompareCorrectly()
+    {
+        // Arrange
+        var version1 = new DotnetVersion(8, 0, 0);
+        var version2 = default(DotnetVersion);
+
+        var version3 = default(DotnetVersion);
+        var version4 = new DotnetVersion(8, 0, 103);
+
+        // Act
+        var different1 = DotnetVersion.Equals(version1, version2);
+        var different2 = DotnetVersion.Equals(version3, version4);
+
+        // Assert
+        Assert.False(different1);
+        Assert.False(different2);
+    }
+
+    [Fact]
+    public void StaticEquals_WithBothVersionsNull_ShouldCompareCorrectly()
+    {
+        // Arrange
+        var version1 = default(DotnetVersion);
+        var version2 = default(DotnetVersion);
+
+        // Act
+        var equal = DotnetVersion.Equals(version1, version2);
+
+        // Assert
+        Assert.True(equal);
+    }
+
+    [Fact]
+    public void StaticEquals_WithDefaultComparisonType_ShouldCompareCorrectly()
+    {
+        // Arrange
+        var version1 = new DotnetVersion(8, 0, 0);
+        var version2 = new DotnetVersion(8, 0, 0);
+
+        var version3 = new DotnetVersion(8, 0, 100);
+        var version4 = new DotnetVersion(8, 0, 103);
+
+        // Act
+        var equal = DotnetVersion.Equals(version1, version2, DotnetVersionComparison.Default);
+        var different = DotnetVersion.Equals(version3, version4, DotnetVersionComparison.Default);
+
+        // Assert
+        Assert.True(equal);
+        Assert.False(different);
+    }
+
+    [Fact]
+    public void StaticEquals_WithIgnoreRevisionComparisonType_ShouldCompareCorrectly()
+    {
+        // Arrange
+        var version1 = new DotnetVersion(8, 0, 0, revision: 2);
+        var version2 = new DotnetVersion(8, 0, 0, revision: 3);
+
+        var version3 = new DotnetVersion(8, 0, 100, revision: 4);
+        var version4 = new DotnetVersion(8, 0, 103, revision: 5);
+
+        // Act
+        var equal = DotnetVersion.Equals(version1, version2, DotnetVersionComparison.IgnoreRevision);
+        var different = DotnetVersion.Equals(version3, version4, DotnetVersionComparison.IgnoreRevision);
+
+        // Assert
+        Assert.True(equal);
+        Assert.False(different);
+    }
+
     [Theory]
     [InlineData(8, 0, 0, false, true, 2, null)]
     public void GetHashCode_WithEqualObjects_ShouldReturnTheSame(int major, int minor, int patch,
