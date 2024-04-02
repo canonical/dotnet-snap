@@ -50,7 +50,7 @@ public class InstallCommand : Command
                         .MaxBy(c => c.Version),
                     _ => _manifestService.Remote.FirstOrDefault(c =>
                         c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase) &&
-                        c.Version == DotnetVersion.Parse(version))
+                        c.Version.Equals(DotnetVersion.Parse(version), DotnetVersionComparison.IgnoreRevision))
                 };
 
                 if (requestedComponent is null)
