@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
@@ -66,8 +66,9 @@ public class Component
             // within the major version/feature band group, uninstall it.
             var previousComponent = manifestService.Local
                 .FirstOrDefault(c => c.Name.Equals(Name, StringComparison.CurrentCultureIgnoreCase)
-                    && c.Version.IsRuntime ? c.Version < Version :
-                        c.Version.FeatureBand == Version.FeatureBand && c.Version < Version);
+                    && (c.Version.IsRuntime
+                            ? c.Version < Version
+                            : (c.Version.FeatureBand == Version.FeatureBand && c.Version < Version)));
 
             if (previousComponent is not null)
             {
