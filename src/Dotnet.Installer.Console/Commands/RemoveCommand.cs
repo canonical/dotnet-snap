@@ -51,7 +51,7 @@ public class RemoveCommand : Command
                 var requestedVersion = DotnetVersion.Parse(version);
                 var requestedComponent = _manifestService.Local.FirstOrDefault(c => 
                     c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
-                    && c.Version == requestedVersion);
+                    && c.Version.Equals(requestedVersion, DotnetVersionComparison.IgnoreRevision));
 
                 if (requestedComponent is null)
                 {

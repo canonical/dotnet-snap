@@ -27,8 +27,7 @@ public class UpdateCommand : Command
             };
         var allOption = new Option<bool>(
             name: "--all",
-            description: "Updates all components with updates available."
-        );
+            description: "Updates all components with updates available.");
         AddArgument(componentArgument);
         AddOption(allOption);
 
@@ -101,12 +100,22 @@ public class UpdateCommand : Command
                                 context.Status(
                                     $"Updating {toUninstall.Name} from {toUninstall.Version} to {toInstall.Version}...");
 
-                                await toUninstall.Uninstall(_fileService, _manifestService);
-                                await toInstall.Install(_fileService, _limitsService, _manifestService);
-
-                                context.Status("[green]Update complete :check_mark_button:[/]");
+                                if (toInstall.CanInstall(_limitsService))
+                                {
+                                    await toUninstall.Uninstall(_fileService, _manifestService);
+                                    await toInstall.Install(_fileService, _limitsService, _manifestService);
+                                }
+                                else
+                                {
+                                    throw new VersionTooHighException(toInstall,
+                                        toInstall.Version.IsRuntime
+                                            ? _limitsService.Runtime
+                                            : _limitsService.Sdk.First(v => v.FeatureBand == toInstall.Version.FeatureBand));
+                                }
                             }
                         }
+
+                        context.Status("[green]Update complete :check_mark_button:[/]");
                     });
 
                 return;

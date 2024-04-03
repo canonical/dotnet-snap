@@ -18,12 +18,14 @@ public partial class DotnetVersion
         if (other.IsPreview && IsRc) return 1;
         if (other.IsRc && IsPreview) return -1;
 
-        return IsStable switch
-        {
-            true when !other.IsStable => 1,
-            false when other.IsStable => -1,
-            _ => 0
-        };
+        if (IsStable && !other.IsStable) return 1;
+        if (!IsStable && other.IsStable) return -1;
+
+        // It will come down to revisions then
+        if (Revision.HasValue && !other.Revision.HasValue) return 1;
+        else if (!Revision.HasValue && other.Revision.HasValue) return -1;
+        else if (!Revision.HasValue && !other.Revision.HasValue) return 0;
+        else return Revision!.Value - other.Revision!.Value;
     }
 
     public static bool operator <(DotnetVersion lhs, DotnetVersion rhs) => lhs.CompareTo(rhs) < 0;
@@ -42,10 +44,47 @@ public partial class DotnetVersion
         if (GetType() != other.GetType()) return false;
 
         return (Major == other.Major) && (Minor == other.Minor) && (Patch == other.Patch) &&
-               (IsPreview == other.IsPreview) && (IsRc == other.IsRc) && (PreviewIdentifier == other.PreviewIdentifier);
+               (IsPreview == other.IsPreview) && (IsRc == other.IsRc) && (PreviewIdentifier == other.PreviewIdentifier) &&
+               (Revision == other.Revision);
     }
 
-    public override int GetHashCode() => (Major, Minor, Patch).GetHashCode();
+    public bool Equals(DotnetVersion? other, DotnetVersionComparison comparisonType)
+        => Equals(this, other, comparisonType);
+
+    public static bool Equals(DotnetVersion? rhs, DotnetVersion? lhs,
+        DotnetVersionComparison comparisonType = DotnetVersionComparison.Default)
+    {
+        if (rhs is null || lhs is null) return rhs == lhs;
+
+        return comparisonType switch
+        {
+            DotnetVersionComparison.IgnoreRevision =>
+                (lhs.Major == rhs.Major) &&
+                (lhs.Minor == rhs.Minor) &&
+                (lhs.Patch == rhs.Patch) &&
+                (lhs.IsPreview == rhs.IsPreview) &&
+                (lhs.IsRc == rhs.IsRc) &&
+                (lhs.PreviewIdentifier == rhs.PreviewIdentifier),
+
+            _ => rhs.Equals(lhs),
+        };
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked // Overflow is fine, just wrap
+        {
+            int hash = 17;
+            hash = hash * 23 + Major.GetHashCode();
+            hash = hash * 23 + Minor.GetHashCode();
+            hash = hash * 23 + Patch.GetHashCode();
+            hash = hash * 23 + IsPreview.GetHashCode();
+            hash = hash * 23 + IsRc.GetHashCode();
+            hash = hash * 23 + (PreviewIdentifier?.GetHashCode() ?? 0);
+            hash = hash * 23 + (Revision?.GetHashCode() ?? 0);
+            return hash;
+        }
+    }
 
     public static bool operator ==(DotnetVersion? lhs, DotnetVersion? rhs)
     {

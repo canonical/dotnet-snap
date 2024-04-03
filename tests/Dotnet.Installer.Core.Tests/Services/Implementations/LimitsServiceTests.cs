@@ -33,10 +33,10 @@ public class LimitsServiceTests
         var limitsService = new LimitsService(fileServiceMock.Object);
         
         // Assert
-        Assert.Equal(new DotnetVersion(8, 0, 3), limitsService.Runtime);
+        Assert.Equal(new DotnetVersion(8, 0, 3, revision: int.MaxValue), limitsService.Runtime);
         Assert.True(limitsService.Sdk.Count() == 2);
-        Assert.Contains(new DotnetVersion(8, 0, 103), limitsService.Sdk);
-        Assert.Contains(new DotnetVersion(8, 0, 201), limitsService.Sdk);
+        Assert.Contains(new DotnetVersion(8, 0, 103, revision: int.MaxValue), limitsService.Sdk);
+        Assert.Contains(new DotnetVersion(8, 0, 201, revision: int.MaxValue), limitsService.Sdk);
     }
 
     [Fact]
