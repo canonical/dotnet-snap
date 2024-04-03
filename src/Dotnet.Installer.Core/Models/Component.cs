@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
@@ -21,7 +21,7 @@ public class Component
     public event EventHandler<InstallationFinishedEventArgs>? InstallationFinished;
     public event EventHandler<InstallingPackageChangedEventArgs>? InstallingPackageChanged;
 
-    private bool CanInstall(ILimitsService limitsService)
+    public bool CanInstall(ILimitsService limitsService)
     {
         if (Version.IsRuntime)
         {
