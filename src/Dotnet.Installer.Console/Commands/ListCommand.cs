@@ -48,22 +48,24 @@ public class ListCommand : Command
                     var componentHasPreviousVersionInstalled = false;
                     foreach (var component in orderedComponents)
                     {
+                        var version = component.Version.ToString().Split('+').First();
+
                         if (component.Installation is not null)
                         {
                             componentHasPreviousVersionInstalled = true;
-                            stringBuilder.Append($" [[{component.Version}");
+                            stringBuilder.Append($" [[{version}");
                             stringBuilder.Append(" [bold green]Installed :check_mark_button:[/]");
                             stringBuilder.Append("]]");
                         }
                         else if (component.Installation is null && orderedComponents.Count > 1 && componentHasPreviousVersionInstalled)
                         {
-                            stringBuilder.Append($" \u2192 [[{component.Version}");
+                            stringBuilder.Append($" \u2192 [[{version}");
                             stringBuilder.Append(" [bold yellow]Update available![/]");
                             stringBuilder.Append("]]");
                         }
                         else
                         {
-                            stringBuilder.Append($" [[{component.Version}]]");
+                            stringBuilder.Append($" [[{version}]]");
                         }
                     }
                     
