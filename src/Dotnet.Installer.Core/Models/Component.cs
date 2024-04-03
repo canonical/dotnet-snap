@@ -61,19 +61,6 @@ public class Component
         if (Installation is null)
         {
             InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
-
-            // If this component already has a previous version installed
-            // within the major version/feature band group, uninstall it.
-            var previousComponent = manifestService.Local
-                .FirstOrDefault(c => c.Name.Equals(Name, StringComparison.CurrentCultureIgnoreCase)
-                    && (c.Version.IsRuntime
-                            ? c.Version < Version
-                            : (c.Version.FeatureBand == Version.FeatureBand && c.Version < Version)));
-
-            if (previousComponent is not null)
-            {
-                await previousComponent.Uninstall(fileService, manifestService);
-            }
             
             // Install component packages
             foreach (var package in Packages)
