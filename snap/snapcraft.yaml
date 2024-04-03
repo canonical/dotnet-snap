@@ -15,11 +15,6 @@ description: |
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: classic
 
-package-repositories:
-  - type: apt
-    ppa: dotnet/dotnet8
-    priority: always
-
 parts:
   dotnet-installer:
     plugin: dotnet
