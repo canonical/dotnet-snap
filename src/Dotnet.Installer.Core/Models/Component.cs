@@ -71,7 +71,7 @@ public class Component
 
                 var filePath = await fileService.DownloadFile(debUrl, manifestService.DotnetInstallLocation);
 
-                await fileService.ExtractDeb(filePath, manifestService.DotnetInstallLocation);
+                await fileService.ExtractDeb(filePath, manifestService.DotnetInstallLocation, manifestService.SnapConfigurationLocation);
 
                 fileService.DeleteFile(filePath);
             }
@@ -99,7 +99,7 @@ public class Component
         {
             foreach (var package in Packages)
             {
-                var registrationFileName = Path.Combine(manifestService.DotnetInstallLocation, 
+                var registrationFileName = Path.Combine(manifestService.SnapConfigurationLocation, 
                     $"{package.Name}.files");
 
                 if (!fileService.FileExists(registrationFileName))

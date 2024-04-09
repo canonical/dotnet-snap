@@ -7,10 +7,12 @@ fi
 
 # Create .NET installation directory
 mkdir "$SNAP_COMMON"/dotnet
+# Create snap configuration directory
+mkdir "$SNAP_COMMON"/snap
 
 # Create an empty local manifest file if it doesn't yet exist.
-if [ ! -e "$SNAP_COMMON"/dotnet/manifest.json ]; then
-    echo "[ ]" > "$SNAP_COMMON"/dotnet/manifest.json
+if [ ! -e "$SNAP_COMMON"/snap/manifest.json ]; then
+    echo "[ ]" > "$SNAP_COMMON"/snap/manifest.json
 fi
 
 # Install latest .NET SDK on first install

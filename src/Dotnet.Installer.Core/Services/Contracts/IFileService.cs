@@ -5,7 +5,7 @@ public interface IFileService
     void DeleteFile(string path);
     Task<string> DownloadFile(Uri url, string destinationDirectory);
     bool FileExists(string path);
-    Task ExtractDeb(string debPath, string destinationDirectory);
+    Task ExtractDeb(string debPath, string destinationDirectory, string snapConfigurationDirectory);
     Task<string> GetFileHash(string filePath);
     IEnumerable<string> MoveDirectory(string sourceDirectory, string destinationDirectory);
     Stream OpenRead(string path);

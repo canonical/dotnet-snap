@@ -8,8 +8,10 @@ namespace Dotnet.Installer.Core.Services.Implementations;
 
 public partial class ManifestService
 {
-    private static readonly string LocalManifestPath = 
-        Path.Join(Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR"), "manifest.json");
+    private static readonly string SnapConfigPath = Path.Join(
+        Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR"), "..", "snap");
+
+    private static readonly string LocalManifestPath = Path.Join(SnapConfigPath, "manifest.json");
     
     private static readonly string[] SupportedVersions = ["6.0", "7.0", "8.0"];
     
