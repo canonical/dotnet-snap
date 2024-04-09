@@ -257,7 +257,8 @@ public class ComponentTests
         var manifestService = new Mock<IManifestService>();
 
         fileService.Setup(f => f.FileExists(It.IsAny<string>())).Returns(true);
-        manifestService.Setup(m => m.DotnetInstallLocation).Returns("test");
+        manifestService.Setup(m => m.DotnetInstallLocation).Returns("dotnet_install_path");
+        manifestService.Setup(m => m.SnapConfigurationLocation).Returns("snap_config_location");
         manifestService.Setup(m => m.Remove(It.IsAny<Component>(), CancellationToken.None))
             .Callback((Component c, CancellationToken cancellationToken) =>
             {
@@ -297,7 +298,8 @@ public class ComponentTests
         var manifestService = new Mock<IManifestService>();
 
         fileService.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-        manifestService.Setup(m => m.DotnetInstallLocation).Returns("test");
+        manifestService.Setup(m => m.DotnetInstallLocation).Returns("dotnet_install_path");
+        manifestService.Setup(m => m.SnapConfigurationLocation).Returns("snap_config_location");
 
         // Assert
         await Assert.ThrowsAsync<ApplicationException>(() =>
