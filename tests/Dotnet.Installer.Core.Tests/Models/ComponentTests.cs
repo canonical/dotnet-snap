@@ -135,7 +135,7 @@ public class ComponentTests
         Assert.NotNull(evt);
         Assert.Equal(component, evt.Sender);
         Assert.Equivalent(new InstallingPackageChangedEventArgs(
-            new Package { Name = "package1", Version = "1.0" }), evt.Arguments);
+            new Package { Name = "package1", Version = "1.0" }, component), evt.Arguments);
     }
     
     [Fact]
