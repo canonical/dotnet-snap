@@ -47,11 +47,20 @@ public class InstallCommand : Command
                 Component? MatchVersion()
                 {
                     if (string.IsNullOrWhiteSpace(version)) return default;
-                    else if (version.Length == 1)
+                    else if (version.Length == 1) // Major version only, e.g. install sdk 8
                     {
                         return _manifestService.Remote
                             .Where(c => 
                                 c.Version.Major == int.Parse(version) &&
+                                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                            .MaxBy(c => c.Version);
+                    }
+                    else if (version.Length == 3) // Major and minor version only, e.g install sdk 8.0
+                    {
+                        return _manifestService.Remote
+                            .Where(c =>                                         // "8.0"
+                                c.Version.Major == int.Parse(version[..1]) &&   // "8"
+                                c.Version.Minor == int.Parse(version[2..3]) &&  // "0"
                                 c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                             .MaxBy(c => c.Version);
                     }
