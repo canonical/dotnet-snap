@@ -19,32 +19,13 @@ public class UpdateCommand : Command
         _limitsService = limitsService ?? throw new ArgumentNullException(nameof(limitsService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
 
-        var componentArgument = new Argument<string>(
-            name: "component",
-            description: "The .NET component name to be updated (dotnet-runtime, aspnetcore-runtime, runtime, sdk).")
-            {
-                Arity = ArgumentArity.ZeroOrOne
-            };
-        var allOption = new Option<bool>(
-            name: "--all",
-            description: "Updates all components with updates available.");
-        AddArgument(componentArgument);
-        AddOption(allOption);
-
-        this.SetHandler(Handle, componentArgument, allOption);
+        this.SetHandler(Handle);
     }
 
-    private async Task Handle(string componentArgument, bool allOption)
+    private async Task Handle()
     {
         try
         {
-            if ((!string.IsNullOrWhiteSpace(componentArgument) && allOption) ||
-                (string.IsNullOrWhiteSpace(componentArgument) && !allOption))
-            {
-                System.Console.Error.WriteLine("ERROR: Either name a component or update --all");
-                Environment.Exit(-1);
-            }
-
             if (Directory.Exists(_manifestService.DotnetInstallLocation))
             {
                 await _manifestService.Initialize();
@@ -70,6 +51,7 @@ public class UpdateCommand : Command
                 if (componentsWithUpdates.Count == 0)
                 {
                     AnsiConsole.WriteLine("There are no updates available.");
+                    return;
                 }
 
                 await AnsiConsole
@@ -115,7 +97,7 @@ public class UpdateCommand : Command
                             }
                         }
 
-                        context.Status("[green]Update complete :check_mark_button:[/]");
+                        AnsiConsole.Write(new Markup("[green]Update complete :check_mark_button:[/]\n"));
                     });
 
                 return;
