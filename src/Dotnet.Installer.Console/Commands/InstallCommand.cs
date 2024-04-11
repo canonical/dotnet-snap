@@ -1,4 +1,4 @@
-using System.CommandLine;
+﻿using System.CommandLine;
 using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
@@ -82,7 +82,7 @@ public class InstallCommand : Command
                     .StartAsync("Thinking...", async context =>
                     {
                         requestedComponent.InstallingPackageChanged += (sender, args) =>
-                            context.Status($"Installing {args.Package.Name}");
+                            context.Status($"Installing {args.Package.Name} {args.Component.Version}");
 
                         await requestedComponent.Install(_fileService, _limitsService, _manifestService);
                     });

@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
@@ -65,7 +65,7 @@ public class Component
             // Install component packages
             foreach (var package in Packages)
             {
-                InstallingPackageChanged?.Invoke(this, new InstallingPackageChangedEventArgs(package));
+                InstallingPackageChanged?.Invoke(this, new InstallingPackageChangedEventArgs(package, this));
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
