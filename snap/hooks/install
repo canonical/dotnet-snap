@@ -7,16 +7,17 @@ fi
 
 # Create .NET installation directory
 mkdir "$SNAP_COMMON"/dotnet
+# Create snap configuration directory
+mkdir "$SNAP_COMMON"/snap
 
 # Create an empty local manifest file if it doesn't yet exist.
-if [ ! -e "$SNAP_COMMON"/dotnet/manifest.json ]; then
-    echo "[ ]" > "$SNAP_COMMON"/dotnet/manifest.json
+if [ ! -e "$SNAP_COMMON"/snap/manifest.json ]; then
+    echo "[ ]" > "$SNAP_COMMON"/snap/manifest.json
 fi
 
 # Install latest .NET SDK on first install
-DOTNET_LATEST=$(jq -r '.sdk[0]' "$SNAP"/Configuration/limits.json)
 DOTNET_INSTALL_DIR=$SNAP_COMMON/dotnet \
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SNAP/usr/lib/x86_64-linux-gnu \
     LIMITS_PATH=$SNAP/Configuration/limits.json \
     SERVER_URL=https://raw.githubusercontent.com/canonical/dotnet-snap/main/manifest/ \
-    "$SNAP"/Dotnet.Installer.Console install dotnet-sdk "$DOTNET_LATEST"
+    "$SNAP"/Dotnet.Installer.Console install dotnet-sdk latest

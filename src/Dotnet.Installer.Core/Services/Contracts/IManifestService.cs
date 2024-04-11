@@ -4,6 +4,7 @@ namespace Dotnet.Installer.Core.Services.Contracts;
 
 public interface IManifestService
 {
+    string SnapConfigurationLocation { get; }
     string DotnetInstallLocation { get; }
 
     IEnumerable<Component> Local { get; }

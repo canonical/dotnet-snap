@@ -15,6 +15,7 @@ public partial class ManifestService : IManifestService
     private List<Component> _remote = [];
     private List<Component> _merged = [];
 
+    public string SnapConfigurationLocation => SnapConfigPath;
     public string DotnetInstallLocation =>
         Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR") 
             ?? throw new ApplicationException("DOTNET_INSTALL_DIR is not set.");

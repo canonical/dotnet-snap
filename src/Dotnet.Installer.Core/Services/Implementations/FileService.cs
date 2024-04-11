@@ -38,7 +38,7 @@ public class FileService : IFileService
         return File.Exists(path);
     }
 
-    public async Task ExtractDeb(string debPath, string destinationDirectory)
+    public async Task ExtractDeb(string debPath, string destinationDirectory, string snapConfigurationDirectory)
     {
         var scratchDirectory = Path.Combine(destinationDirectory, "scratch");
 
@@ -50,7 +50,7 @@ public class FileService : IFileService
         var files = MoveDirectory($"{scratchDirectory}/usr/lib/dotnet", destinationDirectory);
 
         var packageName = Path.GetFileNameWithoutExtension(debPath).Split('_').First();
-        await SavePackageContentToFile(files, destinationDirectory, packageName);
+        await SavePackageContentToFile(files, snapConfigurationDirectory, packageName);
 
         Directory.Delete(scratchDirectory, recursive: true);
     }
@@ -138,9 +138,9 @@ public class FileService : IFileService
         return Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0;
     }
     
-    private static async Task SavePackageContentToFile(IEnumerable<string> files, string installationDirectory, string packageName)
+    private static async Task SavePackageContentToFile(IEnumerable<string> files, string snapConfigurationDirectory, string packageName)
     {
-        var registrationFile = Path.Combine(installationDirectory, $"{packageName}.files");
+        var registrationFile = Path.Combine(snapConfigurationDirectory, $"{packageName}.files");
         await File.WriteAllLinesAsync(registrationFile, files);
     }
 }
