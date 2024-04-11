@@ -102,10 +102,18 @@ public class Component
     {
         if (Installation is not null)
         {
+            // TODO: Double-check architectures from Architecture enum
+            var architecture = RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.X64 => "amd64",
+                Architecture.Arm64 => "arm64",
+                _ => throw new UnsupportedArchitectureException(RuntimeInformation.OSArchitecture)
+            };
+
             foreach (var package in Packages)
             {
                 var registrationFileName = Path.Combine(manifestService.SnapConfigurationLocation, 
-                    $"{package.Name}.files");
+                    $"{package.Name}_{package.Version}_{architecture}.files");
 
                 if (!fileService.FileExists(registrationFileName))
                 {
