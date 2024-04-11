@@ -31,7 +31,7 @@
     },
     {
         "key": "dotnet-sdk-7.0.113",
-        "name": "dotnet-sdk",
+        "name": "sdk",
         "description": "SDK",
         "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
         "version": "7.0.113",
@@ -93,7 +93,7 @@
     },
     {
         "key": "dotnet-sdk-7.0.114",
-        "name": "dotnet-sdk",
+        "name": "sdk",
         "description": "SDK",
         "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
         "version": "7.0.114",
@@ -155,7 +155,7 @@
     },
     {
         "key": "dotnet-sdk-7.0.115",
-        "name": "dotnet-sdk",
+        "name": "sdk",
         "description": "SDK",
         "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
         "version": "7.0.115",
@@ -217,7 +217,7 @@
      },
      {
         "key": "dotnet-sdk-7.0.116",
-        "name": "dotnet-sdk",
+        "name": "sdk",
         "description": "SDK",
         "baseUrl": "https://launchpad.net/ubuntu/+archive/primary/+files/",
         "version": "7.0.116",
