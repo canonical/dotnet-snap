@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
@@ -78,8 +78,6 @@ public class Component
 
             // Register the installation of this component in the local manifest file
             await manifestService.Add(this);
-            
-            InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
         }
         else
         {
@@ -89,8 +87,15 @@ public class Component
         foreach (var dependency in Dependencies)
         {
             var component = manifestService.Remote.First(c => c.Key == dependency);
+            
+            component.InstallationStarted += InstallationStarted;
+            component.InstallationFinished += InstallationFinished;
+            component.InstallingPackageChanged += InstallingPackageChanged;
+
             await component.Install(fileService, limitsService, manifestService);
         }
+
+        InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
     }
 
     public async Task Uninstall(IFileService fileService, IManifestService manifestService)
