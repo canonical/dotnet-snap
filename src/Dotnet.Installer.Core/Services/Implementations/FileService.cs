@@ -49,7 +49,7 @@ public class FileService : IFileService
         
         var files = MoveDirectory($"{scratchDirectory}/usr/lib/dotnet", destinationDirectory);
 
-        var packageName = Path.GetFileNameWithoutExtension(debPath).Split('_').First();
+        var packageName = Path.GetFileNameWithoutExtension(debPath);
         await SavePackageContentToFile(files, snapConfigurationDirectory, packageName);
 
         Directory.Delete(scratchDirectory, recursive: true);

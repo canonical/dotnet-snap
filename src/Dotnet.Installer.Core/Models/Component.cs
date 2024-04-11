@@ -65,7 +65,7 @@ public class Component
             // Install component packages
             foreach (var package in Packages)
             {
-                InstallingPackageChanged?.Invoke(this, new InstallingPackageChangedEventArgs(package));
+                InstallingPackageChanged?.Invoke(this, new InstallingPackageChangedEventArgs(package, this));
                 
                 var debUrl = new Uri(BaseUrl, $"{package.Name}_{package.Version}_{architecture}.deb");
 
@@ -78,8 +78,6 @@ public class Component
 
             // Register the installation of this component in the local manifest file
             await manifestService.Add(this);
-            
-            InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
         }
         else
         {
@@ -89,18 +87,33 @@ public class Component
         foreach (var dependency in Dependencies)
         {
             var component = manifestService.Remote.First(c => c.Key == dependency);
+            
+            component.InstallationStarted += InstallationStarted;
+            component.InstallationFinished += InstallationFinished;
+            component.InstallingPackageChanged += InstallingPackageChanged;
+
             await component.Install(fileService, limitsService, manifestService);
         }
+
+        InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
     }
 
     public async Task Uninstall(IFileService fileService, IManifestService manifestService)
     {
         if (Installation is not null)
         {
+            // TODO: Double-check architectures from Architecture enum
+            var architecture = RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.X64 => "amd64",
+                Architecture.Arm64 => "arm64",
+                _ => throw new UnsupportedArchitectureException(RuntimeInformation.OSArchitecture)
+            };
+
             foreach (var package in Packages)
             {
                 var registrationFileName = Path.Combine(manifestService.SnapConfigurationLocation, 
-                    $"{package.Name}.files");
+                    $"{package.Name}_{package.Version}_{architecture}.files");
 
                 if (!fileService.FileExists(registrationFileName))
                 {

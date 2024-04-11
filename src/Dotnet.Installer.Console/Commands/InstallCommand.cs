@@ -1,5 +1,6 @@
 ﻿using System.CommandLine;
 using Dotnet.Installer.Core.Exceptions;
+using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
@@ -21,7 +22,7 @@ public class InstallCommand : Command
 
         var componentArgument = new Argument<string>(
             name: "component",
-            description: "The .NET component name to be installed (dotnet-runtime, aspnetcore-runtime, runtime, sdk).",
+            description: "The .NET component name to be installed (dotnet-runtime, aspnetcore-runtime, sdk).",
             getDefaultValue: () => "sdk"
         );
         var versionArgument = new Argument<string>(
@@ -43,14 +44,38 @@ public class InstallCommand : Command
             {
                 await _manifestService.Initialize(includeArchive: true);
 
+                Component? MatchVersion()
+                {
+                    if (string.IsNullOrWhiteSpace(version)) return default;
+                    else if (version.Length == 1) // Major version only, e.g. install sdk 8
+                    {
+                        return _manifestService.Remote
+                            .Where(c => 
+                                c.Version.Major == int.Parse(version) &&
+                                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                            .MaxBy(c => c.Version);
+                    }
+                    else if (version.Length == 3) // Major and minor version only, e.g install sdk 8.0
+                    {
+                        return _manifestService.Remote
+                            .Where(c =>                                         // "8.0"
+                                c.Version.Major == int.Parse(version[..1]) &&   // "8"
+                                c.Version.Minor == int.Parse(version[2..3]) &&  // "0"
+                                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                            .MaxBy(c => c.Version);
+                    }
+
+                    return _manifestService.Remote.FirstOrDefault(c =>
+                        c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase) &&
+                        c.Version.Equals(DotnetVersion.Parse(version), DotnetVersionComparison.IgnoreRevision));
+                }
+
                 var requestedComponent = version switch
                 {
                     "latest" => _manifestService.Remote
                         .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                         .MaxBy(c => c.Version),
-                    _ => _manifestService.Remote.FirstOrDefault(c =>
-                        c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase) &&
-                        c.Version.Equals(DotnetVersion.Parse(version), DotnetVersionComparison.IgnoreRevision))
+                    _ => MatchVersion()
                 };
 
                 if (requestedComponent is null)
@@ -66,7 +91,7 @@ public class InstallCommand : Command
                     .StartAsync("Thinking...", async context =>
                     {
                         requestedComponent.InstallingPackageChanged += (sender, args) =>
-                            context.Status($"Installing {args.Package.Name}");
+                            context.Status($"Installing {args.Package.Name} {args.Component.Version}");
 
                         await requestedComponent.Install(_fileService, _limitsService, _manifestService);
                     });
