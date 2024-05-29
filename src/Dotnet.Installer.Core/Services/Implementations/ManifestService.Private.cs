@@ -13,15 +13,11 @@ public partial class ManifestService
 
     private static readonly string LocalManifestPath = Path.Join(SnapConfigPath, "manifest.json");
     
-    private static readonly string[] SupportedVersions = ["6.0", "7.0", "8.0"];
-    
     private static readonly HttpClient HttpClient = new()
     {
-        #if !DEBUG
         BaseAddress = new Uri(Environment.GetEnvironmentVariable("SERVER_URL")
                               ?? throw new ApplicationException(
                                   "SERVER_URL environment variable is not defined."))
-        #endif
     };
 
     private static async Task<List<Component>> LoadLocal(CancellationToken cancellationToken = default)
@@ -36,36 +32,12 @@ public partial class ManifestService
         return result ?? [];
     }
 
-    private static async Task<List<Component>> LoadRemote(bool includeArchive = false, CancellationToken cancellationToken = default)
+    private static async Task<List<Component>> LoadRemote(bool includeUnsupported = false, 
+        CancellationToken cancellationToken = default)
     {
         var content = new List<Component>();
-
-        #if DEBUG
-        await Cli.Wrap("git")
-            .WithArguments(["rev-parse", "--show-toplevel"])
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(path =>
-            {
-                var manifestLocation = Path.Join(path, "manifest", "latest.json");
-                if (!File.Exists(manifestLocation)) return;
-                var latest = JsonSerializer.Deserialize<List<Component>>(
-                    File.ReadAllText(manifestLocation), JsonSerializerOptions);
-                content.AddRange(latest ?? []);
-
-                if (includeArchive)
-                {
-                    foreach (var version in SupportedVersions)
-                    {
-                        var versionArchiveLocation = Path.Join(path, "manifest", version, "archive.json");
-                        if (!File.Exists(versionArchiveLocation)) return;
-                        var versionArchive = JsonSerializer.Deserialize<List<Component>>(
-                            File.ReadAllText(versionArchiveLocation), JsonSerializerOptions);
-                        content.AddRange(versionArchive ?? []);
-                    }
-                }
-            }))
-            .ExecuteAsync(cancellationToken);
-        #else
-        var response = await HttpClient.GetAsync("latest.json", cancellationToken);
+        
+        var response = await HttpClient.GetAsync("supported.json", cancellationToken);
 
         if (response.IsSuccessStatusCode)
         {
@@ -74,21 +46,21 @@ public partial class ManifestService
             if (latest is not null) content.AddRange(latest);
         }
 
-        if (includeArchive)
-        {
-            foreach (var version in SupportedVersions)
-            {
-                response = await HttpClient.GetAsync($"{version}/archive.json", cancellationToken);
-
-                if (!response.IsSuccessStatusCode) continue;
-                
-                var archive =
-                    await response.Content.ReadFromJsonAsync<List<Component>>(cancellationToken: cancellationToken);
-                    
-                if (archive is not null) content.AddRange(archive);
-            }
-        }
-        #endif
+        // TODO Add unsupported flag support
+        // if (includeUnsupported)
+        // {
+        //     foreach (var version in SupportedVersions)
+        //     {
+        //         response = await HttpClient.GetAsync($"{version}/archive.json", cancellationToken);
+        //
+        //         if (!response.IsSuccessStatusCode) continue;
+        //         
+        //         var archive =
+        //             await response.Content.ReadFromJsonAsync<List<Component>>(cancellationToken: cancellationToken);
+        //             
+        //         if (archive is not null) content.AddRange(archive);
+        //     }
+        // }
 
         return content;
     }
