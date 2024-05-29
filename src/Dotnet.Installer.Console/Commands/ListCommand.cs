@@ -31,7 +31,7 @@ public class ListCommand : Command
             await _manifestService.Initialize(includeArchive: allOption);
             var tree = new Tree("Available Components");
 
-            foreach (var versionGroup in _manifestService.Merged.GroupBy(c => c.Version.Major))
+            foreach (var versionGroup in _manifestService.Merged.GroupBy(c => c.LatestVersion.Major))
             {
                 var majorVersionNode = tree.AddNode($".NET {versionGroup.Key}");
                 
@@ -42,13 +42,13 @@ public class ListCommand : Command
                     stringBuilder.Append($"{componentGroup.Last().Description}:");
 
                     var orderedComponents = componentGroup
-                        .OrderBy(c => c.Version)
+                        .OrderBy(c => c.LatestVersion)
                         .ToList();
 
                     var componentHasPreviousVersionInstalled = false;
                     foreach (var component in orderedComponents)
                     {
-                        var version = component.Version.ToString().Split('+').First();
+                        var version = component.LatestVersion.ToString().Split('+').First();
 
                         if (component.Installation is not null)
                         {

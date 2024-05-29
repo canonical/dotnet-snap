@@ -14,9 +14,7 @@ public class DependencyTreeTests
             Key = "key1",
             Name = "component1",
             Description = "Component 1",
-            Version = new DotnetVersion(8, 0, 100),
-            BaseUrl = new Uri("http://test.com"),
-            Packages = [new Package { Name = "package1", Version = "2.0" }],
+            LatestVersion = new DotnetVersion(8, 0, 100),
             Dependencies = []
         };
         
@@ -25,9 +23,7 @@ public class DependencyTreeTests
             Key = "key2",
             Name = "component2",
             Description = "Component 2",
-            Version = new DotnetVersion(8, 0, 100),
-            BaseUrl = new Uri("http://test.com"),
-            Packages = [new Package { Name = "package1", Version = "2.0" }],
+            LatestVersion = new DotnetVersion(8, 0, 100),
             Dependencies = [ "key1" ]
         };
         
@@ -36,9 +32,7 @@ public class DependencyTreeTests
             Key = "key3",
             Name = "component3",
             Description = "Component 3",
-            Version = new DotnetVersion(8, 0, 100),
-            BaseUrl = new Uri("http://test.com"),
-            Packages = [new Package { Name = "package1", Version = "2.0" }],
+            LatestVersion = new DotnetVersion(8, 0, 100),
             Dependencies = [ "key2" ]
         };
 

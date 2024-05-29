@@ -10,10 +10,4 @@
     <PackageReference Include="CliWrap" Version="3.6.6" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="Configuration\limits.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>

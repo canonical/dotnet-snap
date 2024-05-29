@@ -10,14 +10,12 @@ class Program
     {
         var fileService = new FileService();
         var manifestService = new ManifestService();
-        var limitsService = new LimitsService(fileService);
         
         var rootCommand = new RootCommand(".NET Installer command-line tool")
         {
             new ListCommand(manifestService),
-            new InstallCommand(fileService, limitsService, manifestService),
-            new RemoveCommand(fileService, manifestService),
-            new UpdateCommand(fileService, limitsService, manifestService)
+            new InstallCommand(manifestService),
+            new RemoveCommand(fileService, manifestService)
         };
 
         await rootCommand.InvokeAsync(args);
