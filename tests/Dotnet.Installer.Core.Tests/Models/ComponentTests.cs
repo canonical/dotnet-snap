@@ -18,7 +18,9 @@ public class ComponentTests
             Description = "description",
             Key = "key1",
             Name = "name",
-            LatestVersion = new DotnetVersion(8, 0, 103),
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
 
         var manifestService = new Mock<IManifestService>();
@@ -45,7 +47,9 @@ public class ComponentTests
             Description = "description",
             Key = "key1",
             Name = "name",
-            LatestVersion = new DotnetVersion(8, 0, 103)
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
 
         var manifestService = new Mock<IManifestService>();
@@ -73,7 +77,9 @@ public class ComponentTests
             Description = "description",
             Key = "key1",
             Name = "name",
-            LatestVersion = new DotnetVersion(8, 0, 103)
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
         var component2 = new Component
         {
@@ -81,7 +87,9 @@ public class ComponentTests
             Description = "description",
             Key = "key2",
             Name = "name",
-            LatestVersion = new DotnetVersion(8, 0, 103)
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
         var component3 = new Component
         {
@@ -89,7 +97,9 @@ public class ComponentTests
             Description = "description",
             Key = "key3",
             Name = "name",
-            LatestVersion = new DotnetVersion(8, 0, 103)
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
         
         var manifestService = new Mock<IManifestService>();
@@ -121,7 +131,9 @@ public class ComponentTests
             Description = "description",
             Key = "key1",
             Name = "name",
-            LatestVersion = new DotnetVersion(8, 0, 103),
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now,
             Installation = new Installation
             {
                 InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3))

@@ -14,8 +14,10 @@ public class DependencyTreeTests
             Key = "key1",
             Name = "component1",
             Description = "Component 1",
-            LatestVersion = new DotnetVersion(8, 0, 100),
-            Dependencies = []
+            MajorVersion = 8,
+            Dependencies = [],
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
         
         var component2 = new Component
@@ -23,8 +25,10 @@ public class DependencyTreeTests
             Key = "key2",
             Name = "component2",
             Description = "Component 2",
-            LatestVersion = new DotnetVersion(8, 0, 100),
-            Dependencies = [ "key1" ]
+            MajorVersion = 8,
+            Dependencies = [ "key1" ],
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
         
         var component3 = new Component
@@ -32,8 +36,10 @@ public class DependencyTreeTests
             Key = "key3",
             Name = "component3",
             Description = "Component 3",
-            LatestVersion = new DotnetVersion(8, 0, 100),
-            Dependencies = [ "key2" ]
+            MajorVersion = 8,
+            Dependencies = [ "key2" ],
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
 
         var dependencyTree = new DependencyTree([component1, component2, component3]);

@@ -1,6 +1,6 @@
-﻿using Dotnet.Installer.Core.Models.Events;
+﻿using System.Text.Json.Serialization;
+using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
-using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Models;
 
@@ -9,7 +9,10 @@ public class Component
     public required string Key { get; init; }
     public required string Name { get; init; }
     public required string Description { get; init; }
-    public required DotnetVersion LatestVersion { get; init; }
+    public required int MajorVersion { get; init; }
+    public required bool IsLts { get; init; }
+    [JsonPropertyName("eol")]
+    public required DateTime EndOfLife { get; init; }
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
 

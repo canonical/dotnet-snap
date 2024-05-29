@@ -48,10 +48,10 @@ public class RemoveCommand : Command
             {
                 await _manifestService.Initialize();
 
-                var requestedVersion = DotnetVersion.Parse(version);
+                var requestedVersion = int.Parse(version);
                 var requestedComponent = _manifestService.Local.FirstOrDefault(c => 
                     c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
-                    && c.LatestVersion.Equals(requestedVersion, DotnetVersionComparison.IgnoreRevision));
+                    && c.MajorVersion == requestedVersion);
 
                 if (requestedComponent is null)
                 {

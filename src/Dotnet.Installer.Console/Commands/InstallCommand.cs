@@ -2,7 +2,6 @@
 using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
-using Dotnet.Installer.Core.Types;
 using Spectre.Console;
 
 namespace Dotnet.Installer.Console.Commands;
@@ -40,38 +39,12 @@ public class InstallCommand : Command
             {
                 await _manifestService.Initialize(includeArchive: true);
 
-                Component? MatchVersion()
-                {
-                    if (string.IsNullOrWhiteSpace(version)) return default;
-                    else if (version.Length == 1) // Major version only, e.g. install sdk 8
-                    {
-                        return _manifestService.Remote
-                            .Where(c => 
-                                c.LatestVersion.Major == int.Parse(version) &&
-                                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                            .MaxBy(c => c.LatestVersion);
-                    }
-                    else if (version.Length == 3) // Major and minor version only, e.g install sdk 8.0
-                    {
-                        return _manifestService.Remote
-                            .Where(c =>                                         // "8.0"
-                                c.LatestVersion.Major == int.Parse(version[..1]) &&   // "8"
-                                c.LatestVersion.Minor == int.Parse(version[2..3]) &&  // "0"
-                                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                            .MaxBy(c => c.LatestVersion);
-                    }
-
-                    return _manifestService.Remote.FirstOrDefault(c =>
-                        c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase) &&
-                        c.LatestVersion.Equals(DotnetVersion.Parse(version), DotnetVersionComparison.IgnoreRevision));
-                }
-
                 var requestedComponent = version switch
                 {
                     "latest" => _manifestService.Remote
                         .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                        .MaxBy(c => c.LatestVersion),
-                    _ => MatchVersion()
+                        .MaxBy(c => c.MajorVersion),
+                    _ => MatchVersion(component, version)
                 };
 
                 if (requestedComponent is null)
@@ -98,8 +71,30 @@ public class InstallCommand : Command
         }
         catch (ExceptionBase ex)
         {
-            System.Console.Error.WriteLine("ERROR: " + ex.Message);
+            await System.Console.Error.WriteLineAsync("ERROR: " + ex.Message);
             Environment.Exit((int)ex.ErrorCode);
         }
+    }
+    
+    private Component? MatchVersion(string component, string version)
+    {
+        if (string.IsNullOrWhiteSpace(version)) return default;
+
+        return version.Length switch
+        {
+            // Major version only, e.g. install sdk 8
+            1 => _manifestService.Remote
+                .Where(c => c.MajorVersion == int.Parse(version) &&
+                            c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                .MaxBy(c => c.MajorVersion),
+                        
+            // Major and minor version only, e.g. install sdk 8.0
+            3 => _manifestService.Remote.Where(c => // "8.0"
+                    c.MajorVersion == int.Parse(version[..1]) &&
+                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                .MaxBy(c => c.MajorVersion),
+                        
+            _ => default
+        };
     }
 }
