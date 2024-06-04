@@ -1,7 +1,6 @@
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
-using Dotnet.Installer.Core.Types;
 using Moq;
 
 namespace Dotnet.Installer.Core.Tests.Models;
@@ -19,17 +18,21 @@ public class ComponentTests
             Key = "key1",
             Name = "name",
             MajorVersion = 8,
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
 
+        var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
 
         // Act
         var evt = await Assert.RaisesAsync<InstallationStartedEventArgs>(
             h => component.InstallationStarted += h,
             h => component.InstallationStarted -= h,
-            () => component.Install(manifestService.Object));
+            () => component.Install(fileService.Object, manifestService.Object, snapService.Object));
 
         // Assert
         Assert.NotNull(evt);
@@ -49,16 +52,20 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             EndOfLife = DateTime.Now
         };
 
+        var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
 
         // Act
         var evt = await Assert.RaisesAsync<InstallationFinishedEventArgs>(
             h => component.InstallationFinished += h,
             h => component.InstallationFinished -= h,
-            () => component.Install(manifestService.Object));
+            () => component.Install(fileService.Object, manifestService.Object, snapService.Object));
 
         // Assert
         Assert.NotNull(evt);
@@ -78,6 +85,8 @@ public class ComponentTests
             Key = "key1",
             Name = "name",
             MajorVersion = 8,
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -88,6 +97,8 @@ public class ComponentTests
             Key = "key2",
             Name = "name",
             MajorVersion = 8,
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -98,11 +109,15 @@ public class ComponentTests
             Key = "key3",
             Name = "name",
             MajorVersion = 8,
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
         
+        var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
 
         manifestService.Setup(s => s.Remote).Returns([component1, component2, component3]);
         manifestService.Setup(e => e.Add(
@@ -113,7 +128,7 @@ public class ComponentTests
             });
         
         // Act
-        await component1.Install(manifestService.Object);
+        await component1.Install(fileService.Object, manifestService.Object, snapService.Object);
 
         // Assert
         Assert.True(installedComponents.Count == 3);
@@ -132,6 +147,8 @@ public class ComponentTests
             Key = "key1",
             Name = "name",
             MajorVersion = 8,
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now,
             Installation = new Installation
@@ -142,6 +159,7 @@ public class ComponentTests
         
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
 
         fileService.Setup(f => f.FileExists(It.IsAny<string>())).Returns(true);
         manifestService.Setup(m => m.DotnetInstallLocation).Returns("dotnet_install_path");
@@ -155,7 +173,7 @@ public class ComponentTests
         installedComponents.Add(component1);
         
         // Act
-        await component1.Uninstall(fileService.Object, manifestService.Object);
+        await component1.Uninstall(fileService.Object, manifestService.Object, snapService.Object);
 
         // Assert
         Assert.Null(component1.Installation);

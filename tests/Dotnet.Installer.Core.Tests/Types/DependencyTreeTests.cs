@@ -16,6 +16,8 @@ public class DependencyTreeTests
             Description = "Component 1",
             MajorVersion = 8,
             Dependencies = [],
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -27,6 +29,8 @@ public class DependencyTreeTests
             Description = "Component 2",
             MajorVersion = 8,
             Dependencies = [ "key1" ],
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -38,6 +42,8 @@ public class DependencyTreeTests
             Description = "Component 3",
             MajorVersion = 8,
             Dependencies = [ "key2" ],
+            DotnetRoot = "/",
+            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
