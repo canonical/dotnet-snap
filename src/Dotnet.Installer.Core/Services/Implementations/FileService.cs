@@ -1,113 +1,81 @@
-﻿using System.Security.Cryptography;
+﻿using System.Text;
 using CliWrap;
-using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
 
 public class FileService : IFileService
 {
-    public void DeleteFile(string path)
-    {
-        File.Delete(path);
-    }
-
-    public async Task<string> DownloadFile(Uri url, string destinationDirectory)
-    {
-        using var client = new HttpClient();
-        await using var remoteFileStream = await client.GetStreamAsync(url);
-
-        var fileName = Path.Combine(destinationDirectory, url.Segments.Last());
-
-        try
-        {
-            if (File.Exists(fileName)) File.Delete(fileName);
-            await using var writerStream = File.OpenWrite(fileName);
-            await remoteFileStream.CopyToAsync(writerStream);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            throw new NeedsSudoException(fileName);
-        }
-
-        return fileName;
-    }
-
     public bool FileExists(string path)
     {
         return File.Exists(path);
     }
 
-    public async Task ExtractDeb(string debPath, string destinationDirectory, string snapConfigurationDirectory)
+    /// <summary>
+    /// Iterate through a Component's mount-points and resolve their sources from the snap file-system.
+    /// If any of these mount-points contain a wild-carded version directory, e.g. 8.0.*, then
+    /// the method will look for a directory in the source that starts with '8.0.'.
+    /// </summary>
+    /// <param name="root">The .NET installation root directory in the snap file system.</param>
+    /// <param name="targets">The mount-points read from the online installer manifest.</param>
+    /// <returns>A dictionary containing each source-target relationship, with the target as the key.</returns>
+    public IDictionary<string, string> ResolveMountPoints(string root, IEnumerable<string> targets)
     {
-        var scratchDirectory = Path.Combine(destinationDirectory, "scratch");
-
-        await Cli.Wrap("dpkg")
-            .WithArguments([ "--extract", debPath, scratchDirectory ])
-            .WithWorkingDirectory(destinationDirectory)
-            .ExecuteAsync();
-        
-        var files = MoveDirectory($"{scratchDirectory}/usr/lib/dotnet", destinationDirectory);
-
-        var packageName = Path.GetFileNameWithoutExtension(debPath);
-        await SavePackageContentToFile(files, snapConfigurationDirectory, packageName);
-
-        Directory.Delete(scratchDirectory, recursive: true);
-    }
-
-    public async Task<string> GetFileHash(string filePath)
-    {
-        await using var readerStream = File.OpenRead(filePath);
-        var result = await SHA256.HashDataAsync(readerStream);
-        return Convert.ToHexString(result).ToLower();
-    }
-
-    public IEnumerable<string> MoveDirectory(string sourceDirectory, string destinationDirectory)
-    {
-        var result = new List<string>();
-        var dir = new DirectoryInfo(sourceDirectory);
-
-        if (!dir.Exists)
+        var result = new Dictionary<string, string>();
+        foreach (var target in targets)
         {
-            throw new DirectoryNotFoundException(
-                $"The source directory does not exist ({sourceDirectory})."
-            );
-        }
-
-        // If the destination directory does not exist, create it.
-        if (!Directory.Exists(destinationDirectory))
-        {
-            Directory.CreateDirectory(destinationDirectory);
-        }
-
-        // Get the files in the directory and copy them to the new location.
-        var files = dir.GetFiles();
-        foreach (var file in files)
-        {
-            var path = Path.Combine(destinationDirectory, file.Name);
-            result.Add(path);
-            file.MoveTo(path, overwrite: true);
-        }
-
-        // Copy subdirectories and their contents to the new location.
-        var subDirs = dir.GetDirectories();
-        foreach (var subDir in subDirs)
-        {
-            var path = Path.Combine(destinationDirectory, subDir.Name);
-            result.AddRange(MoveDirectory(subDir.FullName, path));
+            var source = Path.Join(root, target);
+            var resolvedTarget = target;
+            
+            // Resolve wildcard if it exists
+            if (target.Contains('*'))
+            {
+                var path = Path.Combine(root, target).Split(Path.DirectorySeparatorChar);
+                var wildCardedDirectory = path.Last();
+                var searchPath = string.Join(Path.DirectorySeparatorChar, path[..^1]);
+                
+                foreach (var directory in Directory.GetDirectories(searchPath))
+                {
+                    var indexOfWildcard = wildCardedDirectory.IndexOf('*');
+                    if (directory.Contains(wildCardedDirectory[..indexOfWildcard]))
+                    {
+                        source = directory;
+                        resolvedTarget = target.Replace("*",
+                            directory.Split(Path.DirectorySeparatorChar).Last().Split('.').Last());
+                        break;
+                    }
+                }
+            }
+            
+            result.Add(resolvedTarget, source);
         }
 
         return result;
     }
 
-    public Stream OpenRead(string path)
+    public async Task ExecuteMountPoints(string root, IDictionary<string, string> mountPoints)
     {
-        return File.OpenRead(path);
-    }
+        foreach (var (relativeTarget, source) in mountPoints)
+        {
+            var target = Path.Join(root, relativeTarget);
 
-    public Task<string[]> ReadAllLines(string fileName)
-    {
-        return File.ReadAllLinesAsync(fileName);
+            if (!Directory.Exists(target))
+            {
+                Directory.CreateDirectory(target);
+            }
+
+            var commandOutput = new StringBuilder();
+            var result = await Cli.Wrap("mount")
+                .WithArguments(["--bind", source, target])
+                .WithValidation(CommandResultValidation.None)
+                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(commandOutput))
+                .ExecuteAsync();
+
+            if (result.IsSuccess) continue;
+            
+            await Console.Error.WriteLineAsync(commandOutput);
+            Environment.Exit(-1);
+        }
     }
 
     public void RemoveEmptyDirectories(string root)
@@ -136,11 +104,5 @@ public class FileService : IFileService
     private static bool IsDirectoryEmpty(string path)
     {
         return Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0;
-    }
-    
-    private static async Task SavePackageContentToFile(IEnumerable<string> files, string snapConfigurationDirectory, string packageName)
-    {
-        var registrationFile = Path.Combine(snapConfigurationDirectory, $"{packageName}.files");
-        await File.WriteAllLinesAsync(registrationFile, files);
     }
 }

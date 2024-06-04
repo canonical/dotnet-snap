@@ -2,13 +2,8 @@
 
 public interface IFileService
 {
-    void DeleteFile(string path);
-    Task<string> DownloadFile(Uri url, string destinationDirectory);
     bool FileExists(string path);
-    Task ExtractDeb(string debPath, string destinationDirectory, string snapConfigurationDirectory);
-    Task<string> GetFileHash(string filePath);
-    IEnumerable<string> MoveDirectory(string sourceDirectory, string destinationDirectory);
-    Stream OpenRead(string path);
-    Task<string[]> ReadAllLines(string fileName);
+    IDictionary<string, string> ResolveMountPoints(string root, IEnumerable<string> targets);
+    Task ExecuteMountPoints(string root, IDictionary<string, string> mountPoints);
     void RemoveEmptyDirectories(string root);
 }
