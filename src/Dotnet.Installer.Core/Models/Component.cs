@@ -13,20 +13,32 @@ public class Component
     public required bool IsLts { get; init; }
     [JsonPropertyName("eol")]
     public required DateTime EndOfLife { get; init; }
+
+    public required string DotnetRoot { get; init; }
+    [JsonPropertyName("mountpoints")]
+    public required IEnumerable<string> MountPoints { get; set; }
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
 
     public event EventHandler<InstallationStartedEventArgs>? InstallationStarted;
     public event EventHandler<InstallationFinishedEventArgs>? InstallationFinished;
 
-    public async Task Install(IManifestService manifestService)
+    public async Task Install(IFileService fileService, IManifestService manifestService, ISnapService snapService)
     {
         if (Installation is null)
         {
             InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
             
-            // Install component packages
-            // TODO snap install <Key>
+            // 1. Install content snap on the machine
+            if (!await snapService.IsSnapInstalled(Key))
+            {
+                await snapService.Install(Key);
+            }
+            
+            // 2. Iterate component's mount-points and bind-mount them where appropriate
+            var dotnetRootAbsolute = Path.Join($"/snap/{Key}/current", DotnetRoot);
+            var mountPoints = fileService.ResolveMountPoints(dotnetRootAbsolute, MountPoints);
+            await fileService.ExecuteMountPoints(manifestService.DotnetInstallLocation, mountPoints);
 
             // Register the installation of this component in the local manifest file
             await manifestService.Add(this);
@@ -43,17 +55,20 @@ public class Component
             component.InstallationStarted += InstallationStarted;
             component.InstallationFinished += InstallationFinished;
 
-            await component.Install(manifestService);
+            await component.Install(fileService, manifestService, snapService);
         }
 
         InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
     }
 
-    public async Task Uninstall(IFileService fileService, IManifestService manifestService)
+    public async Task Uninstall(IFileService fileService, IManifestService manifestService, ISnapService snapService)
     {
         if (Installation is not null)
         {
-            // TODO snap remove --purge <Key>
+            if (!await snapService.IsSnapInstalled(Key))
+            {
+                await snapService.Remove(Key, purge: true);
+            }
 
             // Check for any empty directories
             fileService.RemoveEmptyDirectories(manifestService.DotnetInstallLocation);
