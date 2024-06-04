@@ -10,12 +10,13 @@ class Program
     {
         var fileService = new FileService();
         var manifestService = new ManifestService();
+        var snapService = new SnapService();
         
         var rootCommand = new RootCommand(".NET Installer command-line tool")
         {
             new ListCommand(manifestService),
-            new InstallCommand(manifestService),
-            new RemoveCommand(fileService, manifestService)
+            new InstallCommand(fileService, manifestService, snapService),
+            new RemoveCommand(fileService, manifestService, snapService)
         };
 
         await rootCommand.InvokeAsync(args);

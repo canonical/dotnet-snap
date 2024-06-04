@@ -11,12 +11,14 @@ public class RemoveCommand : Command
 {
     private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
+    private readonly ISnapService _snapService;
 
-    public RemoveCommand(IFileService fileService, IManifestService manifestService) 
+    public RemoveCommand(IFileService fileService, IManifestService manifestService, ISnapService snapService) 
         : base("remove", "Removes an installed .NET component from the system")
     {
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
 
         var componentArgument = new Argument<string>(
             name: "component",
@@ -81,10 +83,10 @@ public class RemoveCommand : Command
                     }
                 }
 
-                await requestedComponent.Uninstall(_fileService, _manifestService);
+                await requestedComponent.Uninstall(_fileService, _manifestService, _snapService);
                 foreach (var reverseDependency in reverseDependencies)
                 {
-                    await reverseDependency.Uninstall(_fileService, _manifestService);
+                    await reverseDependency.Uninstall(_fileService, _manifestService, _snapService);
                 }
 
                 return;

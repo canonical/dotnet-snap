@@ -8,12 +8,16 @@ namespace Dotnet.Installer.Console.Commands;
 
 public class InstallCommand : Command
 {
+    private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
+    private readonly ISnapService _snapService;
 
-    public InstallCommand(IManifestService manifestService)
+    public InstallCommand(IFileService fileService, IManifestService manifestService, ISnapService snapService)
         : base("install", "Installs a new .NET component in the system")
     {
+        _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
 
         var componentArgument = new Argument<string>(
             name: "component",
@@ -59,7 +63,7 @@ public class InstallCommand : Command
                     .Spinner(Spinner.Known.Dots12)
                     .StartAsync("Thinking...", async context =>
                     {
-                        await requestedComponent.Install(_manifestService);
+                        await requestedComponent.Install(_fileService, _manifestService, _snapService);
                     });
 
                 return;
