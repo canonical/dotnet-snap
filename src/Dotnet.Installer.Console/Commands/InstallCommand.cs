@@ -1,6 +1,4 @@
 ﻿using System.CommandLine;
-using Dotnet.Installer.Core.Exceptions;
-using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 using Spectre.Console;
 
@@ -48,7 +46,7 @@ public class InstallCommand : Command
                     "latest" => _manifestService.Remote
                         .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                         .MaxBy(c => c.MajorVersion),
-                    _ => MatchVersion(component, version)
+                    _ => _manifestService.MatchVersion(component, version)
                 };
 
                 if (requestedComponent is null)
@@ -69,36 +67,13 @@ public class InstallCommand : Command
                 return;
             }
 
-            System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", 
-                _manifestService.DotnetInstallLocation);
+            Log.Error($"ERROR: The directory {_manifestService.DotnetInstallLocation} does not exist");
             Environment.Exit(-1);
         }
-        catch (ExceptionBase ex)
+        catch (ApplicationException ex)
         {
-            await System.Console.Error.WriteLineAsync("ERROR: " + ex.Message);
-            Environment.Exit((int)ex.ErrorCode);
+            Log.Error(ex.Message);
+            Environment.Exit(-1);
         }
-    }
-    
-    private Component? MatchVersion(string component, string version)
-    {
-        if (string.IsNullOrWhiteSpace(version)) return default;
-
-        return version.Length switch
-        {
-            // Major version only, e.g. install sdk 8
-            1 => _manifestService.Remote
-                .Where(c => c.MajorVersion == int.Parse(version) &&
-                            c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                .MaxBy(c => c.MajorVersion),
-                        
-            // Major and minor version only, e.g. install sdk 8.0
-            3 => _manifestService.Remote.Where(c => // "8.0"
-                    c.MajorVersion == int.Parse(version[..1]) &&
-                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                .MaxBy(c => c.MajorVersion),
-                        
-            _ => default
-        };
     }
 }

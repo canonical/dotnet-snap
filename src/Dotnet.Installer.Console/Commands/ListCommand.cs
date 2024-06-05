@@ -1,6 +1,5 @@
 ﻿using System.CommandLine;
 using System.Text;
-using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 using Spectre.Console;
 
@@ -45,10 +44,10 @@ public class ListCommand : Command
             
             AnsiConsole.Write(tree);
         }
-        catch (ExceptionBase ex)
+        catch (ApplicationException ex)
         {
-            System.Console.Error.WriteLine("ERROR: " + ex.Message);
-            Environment.Exit((int)ex.ErrorCode);
+            Log.Error(ex.Message);
+            Environment.Exit(-1);
         }
     }
 }

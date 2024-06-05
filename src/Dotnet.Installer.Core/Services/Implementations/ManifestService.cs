@@ -74,4 +74,25 @@ public partial class ManifestService : IManifestService
         }
         await Save(cancellationToken);
     }
+    
+    public Component? MatchVersion(string component, string version)
+    {
+        if (string.IsNullOrWhiteSpace(version)) return default;
+
+        return version.Length switch
+        {
+            // Major version only, e.g. install sdk 8
+            1 => _remote.Where(c => c.MajorVersion == int.Parse(version) &&
+                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                .MaxBy(c => c.MajorVersion),
+                        
+            // Major and minor version only, e.g. install sdk 8.0
+            3 => _remote.Where(c => // "8.0"
+                    c.MajorVersion == int.Parse(version[..1]) &&
+                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                .MaxBy(c => c.MajorVersion),
+                        
+            _ => default
+        };
+    }
 }

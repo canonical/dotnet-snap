@@ -1,6 +1,5 @@
 ﻿using System.CommandLine;
 using System.Text;
-using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
@@ -50,10 +49,13 @@ public class RemoveCommand : Command
             {
                 await _manifestService.Initialize();
 
-                var requestedVersion = int.Parse(version);
-                var requestedComponent = _manifestService.Local.FirstOrDefault(c => 
-                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
-                    && c.MajorVersion == requestedVersion);
+                var requestedComponent = version switch
+                {
+                    "latest" => _manifestService.Remote
+                        .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                        .MaxBy(c => c.MajorVersion),
+                    _ => _manifestService.MatchVersion(component, version)
+                };
 
                 if (requestedComponent is null)
                 {
@@ -92,14 +94,13 @@ public class RemoveCommand : Command
                 return;
             }
 
-            System.Console.Error.WriteLine("ERROR: The directory {0} does not exist",
-                _manifestService.DotnetInstallLocation);
+            Log.Error($"ERROR: The directory {_manifestService.DotnetInstallLocation} does not exist");
             Environment.Exit(-1);
         }
-        catch (ExceptionBase ex)
+        catch (ApplicationException ex)
         {
-            System.Console.Error.WriteLine("ERROR: " + ex.Message);
-            Environment.Exit((int)ex.ErrorCode);
+            Log.Error(ex.Message);
+            Environment.Exit(-1);
         }
     }
 }

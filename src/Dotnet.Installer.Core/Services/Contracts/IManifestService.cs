@@ -14,4 +14,5 @@ public interface IManifestService
     Task Initialize(bool includeArchive = false, CancellationToken cancellationToken = default);
     Task Add(Component component, CancellationToken cancellationToken = default);
     Task Remove(Component component, CancellationToken cancellationToken = default);
+    Component? MatchVersion(string component, string version);
 }
