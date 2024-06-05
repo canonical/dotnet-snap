@@ -37,9 +37,7 @@ parts:
       - zlib1g
 
   dotnet-installer:
-    plugin: dotnet
-    dotnet-build-configuration: Release
-    dotnet-self-contained-runtime-identifier: linux-x64
+    plugin: dump
     source: .
     build-packages:
       - dotnet-sdk-8.0
@@ -49,6 +47,23 @@ parts:
     #   - liblttng-ust1
     #   - libicu70
     #   - libssl3
+    override-build: |
+      /usr/bin/dotnet --info
+      
+      if [ "${CRAFT_ARCH_BUILD_FOR}" = "amd64" ]; then
+        RUNTIME_RID="linux-x64"
+      elif [ "${CRAFT_ARCH_BUILD_FOR}" = "arm64" ]; then
+        RUNTIME_RID="linux-arm64"
+      else
+        echo "Unknown architecture (${CRAFT_ARCH_BUILD_FOR})"
+        exit 1
+      fi
+
+      /usr/bin/dotnet publish src/Dotnet.Installer.Console --output "${SNAPCRAFT_PART_INSTALL}" \
+        --configuration Release -r "${RUNTIME_RID}" -p:DebugSymbols=false -p:DebugType=none
+      chmod 555 "${SNAPCRAFT_PART_INSTALL}/Dotnet.Installer.Console"
+      
+      craftctl default
     override-stage: |
       craftctl default
       patchelf --set-interpreter /snap/dotnet/current/lib64/ld-linux-x86-64.so.2 Dotnet.Installer.Console
