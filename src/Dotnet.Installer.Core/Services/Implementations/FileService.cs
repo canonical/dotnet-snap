@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using CliWrap;
+using Dotnet.Installer.Core.Extensions;
 using Dotnet.Installer.Core.Services.Contracts;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
@@ -53,6 +54,12 @@ public class FileService : IFileService
         return result;
     }
 
+    /// <summary>
+    /// Iterates through a list of resolved mount-points and bind-mounts them.
+    /// </summary>
+    /// <param name="root">The target .NET installation root directory.</param>
+    /// <param name="mountPoints">The dictionary of source-target relationships.</param>
+    /// <exception cref="ApplicationException">When the bind-mount fails.</exception>
     public async Task ExecuteMountPoints(string root, IDictionary<string, string> mountPoints)
     {
         foreach (var (relativeTarget, source) in mountPoints)
@@ -64,17 +71,70 @@ public class FileService : IFileService
                 Directory.CreateDirectory(target);
             }
 
-            var commandOutput = new StringBuilder();
-            var result = await Cli.Wrap("mount")
+            if (Directory.GetFiles(target).Length != 0)
+            {
+                // Directory is not empty, check if there is already a bind-mount on it.
+                var procMounts = await File.ReadAllTextAsync(Path.Combine("/", "proc", "mounts"));
+                if (procMounts.Contains(target))
+                    continue;
+            }
+
+            var standardOutput = new StringBuilder();
+            var standardError = new StringBuilder();
+            
+            var command = Cli.Wrap("mount")
                 .WithArguments(["--bind", source, target])
                 .WithValidation(CommandResultValidation.None)
-                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(commandOutput))
-                .ExecuteAsync();
+                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardOutput))
+                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardError))
+                .Elevate();
 
+            var result = await command.ExecuteAsync();
+            if (result.IsSuccess) continue;
+
+            throw new ApplicationException(standardError.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Iterates through a list of resolved mount-points and unmounts them.
+    /// </summary>
+    /// <param name="root">The target .NET installation root directory.</param>
+    /// <param name="mountPoints">The dictionary of source-target relationships.</param>
+    /// <exception cref="ApplicationException">When unmount fails.</exception>
+    public async Task RemoveMountPoints(string root, IDictionary<string, string> mountPoints)
+    {
+        foreach (var (relativeTarget, source) in mountPoints)
+        {
+            var target = Path.Join(root, relativeTarget);
+
+            if (!Directory.Exists(target))
+            {
+                throw new ApplicationException($"The directory {target} does not exist.");
+            }
+            
+            if (Directory.GetFiles(target).Length != 0)
+            {
+                // Directory is not empty, check if there is already a bind-mount on it.
+                var procMounts = await File.ReadAllTextAsync(Path.Combine("/", "proc", "mounts"));
+                if (!procMounts.Contains(target))
+                    continue;
+            }
+
+            var standardOutput = new StringBuilder();
+            var standardError = new StringBuilder();
+            
+            var command = Cli.Wrap("umount")
+                .WithArguments([target])
+                .WithValidation(CommandResultValidation.None)
+                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardOutput))
+                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardError))
+                .Elevate();
+
+            var result = await command.ExecuteAsync();
             if (result.IsSuccess) continue;
             
-            await Console.Error.WriteLineAsync(commandOutput);
-            Environment.Exit(-1);
+            throw new ApplicationException(standardError.ToString());
         }
     }
 
