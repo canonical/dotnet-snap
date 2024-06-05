@@ -29,13 +29,14 @@ public class Component
         {
             InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
             
-            // 1. Install content snap on the machine
-            if (!await snapService.IsSnapInstalled(Key))
+            // Install content snap on the machine
+            if (!snapService.IsSnapInstalled(Key))
             {
-                await snapService.Install(Key);
+                var result = await snapService.Install(Key);
+                if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
             }
             
-            // 2. Iterate component's mount-points and bind-mount them where appropriate
+            // Iterate component's mount-points and bind-mount them where appropriate
             var dotnetRootAbsolute = Path.Join($"/snap/{Key}/current", DotnetRoot);
             var mountPoints = fileService.ResolveMountPoints(dotnetRootAbsolute, MountPoints);
             await fileService.ExecuteMountPoints(manifestService.DotnetInstallLocation, mountPoints);
@@ -65,7 +66,12 @@ public class Component
     {
         if (Installation is not null)
         {
-            if (!await snapService.IsSnapInstalled(Key))
+            // Unmount content directories
+            var dotnetRootAbsolute = Path.Join($"/snap/{Key}/current", DotnetRoot);
+            var mountPoints = fileService.ResolveMountPoints(dotnetRootAbsolute, MountPoints);
+            await fileService.RemoveMountPoints(manifestService.DotnetInstallLocation, mountPoints);
+            
+            if (snapService.IsSnapInstalled(Key))
             {
                 await snapService.Remove(Key, purge: true);
             }
