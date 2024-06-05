@@ -1,8 +1,10 @@
+using Dotnet.Installer.Core.Types;
+
 namespace Dotnet.Installer.Core.Services.Contracts;
 
 public interface ISnapService
 {
-    Task<bool> IsSnapInstalled(string name, CancellationToken cancellationToken = default);
-    Task Install(string name, CancellationToken cancellationToken = default);
-    Task Remove(string name, bool purge = false, CancellationToken cancellationToken = default);
+    bool IsSnapInstalled(string name, CancellationToken cancellationToken = default);
+    Task<InvocationResult> Install(string name, CancellationToken cancellationToken = default);
+    Task<InvocationResult> Remove(string name, bool purge = false, CancellationToken cancellationToken = default);
 }
