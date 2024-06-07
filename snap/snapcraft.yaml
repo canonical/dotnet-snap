@@ -1,6 +1,6 @@
 name: dotnet
 base: core22
-version: 8.0.4
+version: 8.0.5
 summary: .NET CLI tools, SDK and runtime
 description: |
   .NET is the free, open-source, cross-platform framework for building modern
@@ -83,9 +83,10 @@ parts:
       - dotnet-hostfxr-8.0
     override-stage: |
       craftctl default
+      DOTNET_VERSION=$(craftctl get version)
       patchelf --set-interpreter /snap/dotnet/current/lib64/ld-linux-x86-64.so.2 usr/lib/dotnet/dotnet
       patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/lib/dotnet/dotnet
-      patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/lib/dotnet/host/fxr/8.0.4/libhostfxr.so
+      patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
   
   netstandard-targeting-pack:
     plugin: nil
