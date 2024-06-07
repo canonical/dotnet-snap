@@ -56,13 +56,7 @@ public class InstallCommand : Command
                     Environment.Exit(-1);
                 }
 
-                await AnsiConsole
-                    .Status()
-                    .Spinner(Spinner.Known.Dots12)
-                    .StartAsync("Thinking...", async context =>
-                    {
-                        await requestedComponent.Install(_fileService, _manifestService, _snapService);
-                    });
+                await requestedComponent.Install(_fileService, _manifestService, _snapService);
 
                 return;
             }
