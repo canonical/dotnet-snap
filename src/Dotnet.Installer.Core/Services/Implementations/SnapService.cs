@@ -1,6 +1,3 @@
-using System.Text;
-using CliWrap;
-using Dotnet.Installer.Core.Extensions;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
@@ -15,37 +12,21 @@ public class SnapService : ISnapService
 
     public async Task<InvocationResult> Install(string name, CancellationToken cancellationToken = default)
     {
-        var standardOutput = new StringBuilder();
-        var standardError = new StringBuilder();
-        
-        var command = Cli.Wrap("snap")
-            .WithArguments(["install", name])
-            .WithValidation(CommandResultValidation.None)
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(standardOutput))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardError))
-            .Elevate();
-
-        var result = await command.ExecuteAsync(cancellationToken);
-        return new InvocationResult(result.IsSuccess, standardOutput.ToString(), standardError.ToString());
+        var result = await Terminal.Invoke("snap", "install", name);
+        return new InvocationResult(result == 0, "", "");
     }
 
     public async Task<InvocationResult> Remove(string name, bool purge = false, CancellationToken cancellationToken = default)
     {
-        var standardOutput = new StringBuilder();
-        var standardError = new StringBuilder();
+        var arguments = new List<string>
+        {
+            "remove"
+        };
         
-        List<string> arguments = ["remove"];
         if (purge) arguments.Add("--purge");
         arguments.Add(name);
-
-        var command = Cli.Wrap("snap")
-            .WithArguments(arguments)
-            .WithValidation(CommandResultValidation.None)
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(standardOutput))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardError))
-            .Elevate();
-
-        var result = await command.ExecuteAsync(cancellationToken);
-        return new InvocationResult(result.IsSuccess, standardOutput.ToString(), standardError.ToString());
+        
+        var result = await Terminal.Invoke("snap", arguments.ToArray());
+        return new InvocationResult(result == 0, "", "");
     }
 }

@@ -2,6 +2,7 @@
 using CliWrap;
 using Dotnet.Installer.Core.Extensions;
 using Dotnet.Installer.Core.Services.Contracts;
+using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
 
@@ -79,20 +80,10 @@ public class FileService : IFileService
                     continue;
             }
 
-            var standardOutput = new StringBuilder();
-            var standardError = new StringBuilder();
-            
-            var command = Cli.Wrap("mount")
-                .WithArguments(["--bind", source, target])
-                .WithValidation(CommandResultValidation.None)
-                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardOutput))
-                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardError))
-                .Elevate();
+            var result = await Terminal.Invoke("mount", "--bind", source, target);
+            if (result == 0) continue;
 
-            var result = await command.ExecuteAsync();
-            if (result.IsSuccess) continue;
-
-            throw new ApplicationException(standardError.ToString());
+            throw new ApplicationException();
         }
     }
 
@@ -121,20 +112,10 @@ public class FileService : IFileService
                     continue;
             }
 
-            var standardOutput = new StringBuilder();
-            var standardError = new StringBuilder();
+            var result = await Terminal.Invoke("umount", target);
+            if (result == 0) continue;
             
-            var command = Cli.Wrap("umount")
-                .WithArguments([target])
-                .WithValidation(CommandResultValidation.None)
-                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardOutput))
-                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardError))
-                .Elevate();
-
-            var result = await command.ExecuteAsync();
-            if (result.IsSuccess) continue;
-            
-            throw new ApplicationException(standardError.ToString());
+            throw new ApplicationException();
         }
     }
 
