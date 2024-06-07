@@ -4,18 +4,21 @@ namespace Dotnet.Installer.Core.Types;
 
 public static class Terminal
 {
-    public static async Task<int> Invoke(string program, params string[] arguments)
+    public static async Task<int> Invoke(string program, bool sudo = false, params string[] arguments)
     {
         var process = new Process();
 
-        if (Native.GetCurrentEffectiveUserId() != Native.RootUid)
+        process.StartInfo.FileName = program;
+        if (sudo)
         {
-            process.StartInfo.FileName = "sudo";
-            process.StartInfo.ArgumentList.Add(program);
-        }
-        else
-        {
-            process.StartInfo.FileName = program;
+            if (Native.GetCurrentEffectiveUserId() != Native.RootUid)
+            {
+                process.StartInfo.FileName = File.Exists(Path.Join("/", "usr", "bin", "pkexec")) 
+                    ? "pkexec"
+                    : "sudo";
+            
+                process.StartInfo.ArgumentList.Add(program);
+            }
         }
         
         foreach (var argument in arguments)

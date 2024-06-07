@@ -78,7 +78,7 @@ public class FileService : IFileService
                     continue;
             }
 
-            var result = await Terminal.Invoke("mount", "--bind", source, target);
+            var result = await Terminal.Invoke("mount", sudo: true, "--bind", source, target);
             if (result == 0) continue;
 
             throw new ApplicationException();
@@ -110,7 +110,7 @@ public class FileService : IFileService
                     continue;
             }
 
-            var result = await Terminal.Invoke("umount", target);
+            var result = await Terminal.Invoke("umount", sudo: true, target);
             if (result == 0) continue;
             
             throw new ApplicationException();
