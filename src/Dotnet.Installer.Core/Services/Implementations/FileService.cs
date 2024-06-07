@@ -67,7 +67,15 @@ public class FileService : IFileService
 
             if (!Directory.Exists(target))
             {
-                Directory.CreateDirectory(target);
+                try
+                {
+                    Directory.CreateDirectory(target);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // If the target directory sits in a location owned by root, then invoke elevated mkdir.
+                    await Terminal.Invoke("mkdir", sudo: true, "-p", target);
+                }
             }
 
             if (Directory.GetFiles(target).Length != 0)
