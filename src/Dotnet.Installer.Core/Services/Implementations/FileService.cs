@@ -1,13 +1,11 @@
-﻿using System.Text;
-using CliWrap;
-using Dotnet.Installer.Core.Extensions;
-using Dotnet.Installer.Core.Services.Contracts;
+﻿using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
 
 public class FileService : IFileService
 {
+    /// <inheritdoc cref="File.Exists"/>
     public bool FileExists(string path)
     {
         return File.Exists(path);
@@ -119,6 +117,12 @@ public class FileService : IFileService
         }
     }
 
+    /// <summary>
+    /// Iterates recursively through all the directories within <c>root</c> and deletes any empty directories found.
+    /// <c>root</c> will NOT be deleted even if it ends up being an empty directory itself.
+    /// </summary>
+    /// <param name="root">A path to the top-level directory.</param>
+    /// <exception cref="DirectoryNotFoundException">When <c>root</c> does not exist.</exception>
     public void RemoveEmptyDirectories(string root)
     {
         var dir = new DirectoryInfo(root);
@@ -130,7 +134,6 @@ public class FileService : IFileService
             );
         }
 
-        // Recursively search for empty directories and remove them
         foreach (var directory in dir.GetDirectories())
         {
             RemoveEmptyDirectories(directory.FullName);
