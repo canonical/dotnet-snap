@@ -12,7 +12,7 @@ public class SnapService : ISnapService
 
     public async Task<InvocationResult> Install(string name, CancellationToken cancellationToken = default)
     {
-        var result = await Terminal.Invoke("snap", sudo: true, "install", name);
+        var result = await Terminal.Invoke("snap", "install", name);
         return new InvocationResult(result == 0, "", "");
     }
 
@@ -26,7 +26,7 @@ public class SnapService : ISnapService
         if (purge) arguments.Add("--purge");
         arguments.Add(name);
         
-        var result = await Terminal.Invoke("snap", sudo: true, arguments.ToArray());
+        var result = await Terminal.Invoke("snap", arguments.ToArray());
         return new InvocationResult(result == 0, "", "");
     }
 }

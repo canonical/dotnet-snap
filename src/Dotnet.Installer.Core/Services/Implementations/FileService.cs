@@ -74,7 +74,7 @@ public class FileService : IFileService
                 catch (UnauthorizedAccessException)
                 {
                     // If the target directory sits in a location owned by root, then invoke elevated mkdir.
-                    await Terminal.Invoke("mkdir", sudo: true, "-p", target);
+                    await Terminal.Invoke("mkdir", "-p", target);
                 }
             }
 
@@ -86,7 +86,7 @@ public class FileService : IFileService
                     continue;
             }
 
-            var result = await Terminal.Invoke("mount", sudo: true, "--bind", source, target);
+            var result = await Terminal.Invoke("mount", "--bind", source, target);
             if (result == 0) continue;
 
             throw new ApplicationException();
@@ -118,7 +118,7 @@ public class FileService : IFileService
                     continue;
             }
 
-            var result = await Terminal.Invoke("umount", sudo: true, target);
+            var result = await Terminal.Invoke("umount", target);
             if (result == 0) continue;
             
             throw new ApplicationException();
