@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.Diagnostics;
 using Dotnet.Installer.Console.Commands;
 using Dotnet.Installer.Core.Services.Implementations;
 
@@ -8,6 +9,17 @@ class Program
 {
     private static async Task Main(string[] args)
     {
+        var debugEnabled = Environment.GetEnvironmentVariable("DOTNET_INSTALLER_DEBUG")?.Equals("1") ?? false;
+        if (debugEnabled)
+        {
+            Log.Debug("Waiting for debugger...");
+            while (!Debugger.IsAttached)
+            {
+                // Wait for debugger to be attached.
+            }
+            Log.Debug("Debugger attached");
+        }
+        
         var fileService = new FileService();
         var manifestService = new ManifestService();
         var snapService = new SnapService();
