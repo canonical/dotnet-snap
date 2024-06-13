@@ -23,7 +23,7 @@ run_elevated() {
     fi
 }
 
-if [ "$1" = "installer" ]; then
+if [ -n "${1:-}" ] && [ "$1" = "installer" ]; then
     # Pass second argument onwards to .NET installer tool.
     CommandToExecute="$SNAP/Dotnet.Installer.Console ${*: 2}"
     

@@ -2,4 +2,4 @@
 
 # Unmount all locations before removing the snap
 # shellcheck disable=SC2046
-umount $(mount | grep /var/snap/dotnet/common | awk '{print $3}')
+umount -f $(mount | grep /var/snap/dotnet/common | awk '{print $3}')
