@@ -1,4 +1,5 @@
-﻿using Dotnet.Installer.Core.Services.Contracts;
+﻿using System.Diagnostics;
+using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
@@ -47,6 +48,7 @@ public class FileService : IFileService
                 }
             }
             
+            Debug.WriteLine($"[DEBUG] Adding {source} -> {resolvedTarget} to mount-points");
             result.Add(resolvedTarget, source);
         }
 
@@ -67,29 +69,20 @@ public class FileService : IFileService
 
             if (!Directory.Exists(target))
             {
-                try
-                {
-                    Directory.CreateDirectory(target);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    // If the target directory sits in a location owned by root, then invoke elevated mkdir.
-                    await Terminal.Invoke("mkdir", "-p", target);
-                }
+                Directory.CreateDirectory(target);
             }
 
-            if (Directory.GetFiles(target).Length != 0)
+            // Check if there is already a bind-mount on target.
+            var procMounts = await File.ReadAllTextAsync(Path.Combine("/", "proc", "mounts"));
+            if (procMounts.Contains(target))
             {
-                // Directory is not empty, check if there is already a bind-mount on it.
-                var procMounts = await File.ReadAllTextAsync(Path.Combine("/", "proc", "mounts"));
-                if (procMounts.Contains(target))
-                    continue;
+                Debug.WriteLine($"[DEBUG] {target} already mounted, skipping...");
+                continue;
             }
 
+            Debug.WriteLine($"[DEBUG] Mounting {target}...");
             var result = await Terminal.Invoke("mount", "--bind", source, target);
-            if (result == 0) continue;
-
-            throw new ApplicationException();
+            if (result != 0) throw new ApplicationException();
         }
     }
 

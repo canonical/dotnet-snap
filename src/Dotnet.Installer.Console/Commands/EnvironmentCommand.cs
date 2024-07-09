@@ -1,19 +1,32 @@
 using System.CommandLine;
 using System.Text;
+using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Console.Commands;
 
 public class EnvironmentCommand : Command
 {
-    public EnvironmentCommand() : base("environment", "Gets information about the current environment.")
+    public EnvironmentCommand(IFileService fileService, IManifestService manifestService)
+        : base("environment", "Gets information about the current environment.")
     {
-        this.IsHidden = true;
+        IsHidden = true;
         
-        this.SetHandler(Handle);
+        var infoCommand = new Command("info", "Gets environment information.");
+        infoCommand.SetHandler(HandleInfo);
+
+        var mountCommand = new Command("mount", "Mounts all available .NET locations.");
+        mountCommand.SetHandler(() => HandleMount(fileService, manifestService));
+
+        var unmountCommand = new Command("unmount", "Unmounts all current .NET bind-mounts.");
+        unmountCommand.SetHandler(() => HandleUnmount(fileService, manifestService));
+        
+        AddCommand(infoCommand);
+        AddCommand(mountCommand);
+        AddCommand(unmountCommand);
     }
 
-    private static void Handle()
+    private void HandleInfo()
     {
         var environment = new EnvironmentInformation
         {
@@ -21,6 +34,24 @@ public class EnvironmentCommand : Command
         };
         
         System.Console.Write(environment);
+    }
+
+    private async Task HandleMount(IFileService fileService, IManifestService manifestService)
+    {
+        await manifestService.Initialize();
+        foreach (var installedComponent in manifestService.Local)
+        {
+            await installedComponent.Mount(fileService, manifestService);
+        }
+    }
+
+    private async Task HandleUnmount(IFileService fileService, IManifestService manifestService)
+    {
+        await manifestService.Initialize();
+        foreach (var installedComponent in manifestService.Local)
+        {
+            await installedComponent.Unmount(fileService, manifestService);
+        }
     }
     
     private class EnvironmentInformation

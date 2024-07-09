@@ -8,7 +8,7 @@ run_elevated() {
     ServerUrl=$SERVER_URL
     
     # If the third argument is either install or remove, we need to elevate the process.
-    ProcessEuid=$("$SNAP"/Dotnet.Installer.Console environment | grep "Process+EffectiveUserId" | cut -d= -f2)
+    ProcessEuid=$("$SNAP"/Dotnet.Installer.Console environment info | grep "Process+EffectiveUserId" | cut -d= -f2)
     
     if [ "$ProcessEuid" -eq "0" ]; then
         $CommandToExecute
@@ -41,6 +41,9 @@ else
     # Check whether there is any .NET components installed.
     # If not, we install the latest SDK by default.
     if [ "$(jq length "${SNAP_COMMON}/snap/manifest.json")" -eq "0" ]; then
+        echo "Welcome to .NET on Snap!"
+        echo "We are downloading and installing the latest SDK for you to use. It should only be a few moments."
+        
         CommandToExecute="$SNAP/Dotnet.Installer.Console install sdk latest"
         run_elevated "$CommandToExecute"
     fi 

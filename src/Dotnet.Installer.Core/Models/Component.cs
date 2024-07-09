@@ -35,11 +35,9 @@ public class Component
                 var result = await snapService.Install(Key);
                 if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
             }
-            
-            // Iterate component's mount-points and bind-mount them where appropriate
-            var dotnetRootAbsolute = Path.Join($"/snap/{Key}/current", DotnetRoot);
-            var mountPoints = fileService.ResolveMountPoints(dotnetRootAbsolute, MountPoints);
-            await fileService.ExecuteMountPoints(manifestService.DotnetInstallLocation, mountPoints);
+
+            // Mount component locations
+            await Mount(fileService, manifestService);
 
             // Register the installation of this component in the local manifest file
             await manifestService.Add(this);
@@ -66,10 +64,7 @@ public class Component
     {
         if (Installation is not null)
         {
-            // Unmount content directories
-            var dotnetRootAbsolute = Path.Join($"/snap/{Key}/current", DotnetRoot);
-            var mountPoints = fileService.ResolveMountPoints(dotnetRootAbsolute, MountPoints);
-            await fileService.RemoveMountPoints(manifestService.DotnetInstallLocation, mountPoints);
+            await Unmount(fileService, manifestService);
             
             if (snapService.IsSnapInstalled(Key))
             {
@@ -82,5 +77,21 @@ public class Component
             Installation = null;
             await manifestService.Remove(this);
         }
+    }
+
+    public async Task Mount(IFileService fileService, IManifestService manifestService)
+    {
+        // Iterate component's mount-points and bind-mount them where appropriate
+        var dotnetRootAbsolute = Path.Join($"/snap/{Key}/current", DotnetRoot);
+        var mountPoints = fileService.ResolveMountPoints(dotnetRootAbsolute, MountPoints);
+        await fileService.ExecuteMountPoints(manifestService.DotnetInstallLocation, mountPoints);
+    }
+
+    public async Task Unmount(IFileService fileService, IManifestService manifestService)
+    {
+        // Unmount content directories
+        var dotnetRootAbsolute = Path.Join($"/snap/{Key}/current", DotnetRoot);
+        var mountPoints = fileService.ResolveMountPoints(dotnetRootAbsolute, MountPoints);
+        await fileService.RemoveMountPoints(manifestService.DotnetInstallLocation, mountPoints);
     }
 }
