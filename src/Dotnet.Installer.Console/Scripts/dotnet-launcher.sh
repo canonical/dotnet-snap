@@ -40,7 +40,7 @@ else
     
     # Check whether there is any .NET components installed.
     # If not, we install the latest SDK by default.
-    if [ "$(jq length "${SNAP_COMMON}/snap/manifest.json")" -eq "0" ]; then
+    if [ "$("$SNAP"/usr/bin/jq length "${SNAP_COMMON}/snap/manifest.json")" -eq "0" ]; then
         echo "Welcome to .NET on Snap!"
         echo "We are downloading and installing the latest SDK for you to use. It should only be a few moments."
         

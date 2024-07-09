@@ -35,6 +35,7 @@ parts:
       - libstdc++6
       - libunwind8
       - zlib1g
+      - jq
 
   dotnet-installer:
     plugin: dump
