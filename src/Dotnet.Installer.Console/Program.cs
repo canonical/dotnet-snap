@@ -3,6 +3,7 @@ using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using Dotnet.Installer.Console.Commands;
+using Dotnet.Installer.Console.Services.Implementations;
 using Dotnet.Installer.Core.Services.Implementations;
 using Serilog;
 using Serilog.Events;
@@ -24,17 +25,18 @@ class Program
             }
             Log.Debug("Debugger attached");
         }
-        
+
         var fileService = new FileService();
         var manifestService = new ManifestService();
         var snapService = new SnapService();
-        
+        var logger = new Logger();
+
         var rootCommand = new RootCommand(".NET Installer command-line tool")
         {
-            new EnvironmentCommand(fileService, manifestService),
+            new EnvironmentCommand(fileService, manifestService, logger),
             new ListCommand(manifestService),
-            new InstallCommand(fileService, manifestService, snapService),
-            new RemoveCommand(fileService, manifestService, snapService)
+            new InstallCommand(fileService, manifestService, snapService, logger),
+            new RemoveCommand(fileService, manifestService, snapService, logger)
         };
 
         var verboseOption = new Option<bool>("--verbose", "Enables debug output level verbosity.");
