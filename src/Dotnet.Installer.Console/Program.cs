@@ -4,6 +4,8 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using Dotnet.Installer.Console.Commands;
 using Dotnet.Installer.Core.Services.Implementations;
+using Serilog;
+using Serilog.Events;
 
 namespace Dotnet.Installer.Console;
 
@@ -42,11 +44,12 @@ class Program
 
         commandLineBuilder.AddMiddleware(async (context, next) =>
         {
-            if (context.ParseResult.Tokens.Any(t => t.Value == "--verbose"))
-            {
-                System.Console.WriteLine("Enabled verbose output.");
-                Trace.Listeners.Add(new TextWriterTraceListener(System.Console.Out));
-            }
+            var isVerbose = context.ParseResult.Tokens.Any(t => t.Value == "--verbose");
+
+            Serilog.Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Is(isVerbose ? LogEventLevel.Verbose : LogEventLevel.Information)
+                .WriteTo.Console()
+                .CreateLogger();
 
             await next(context);
         });
@@ -54,5 +57,7 @@ class Program
         commandLineBuilder.UseDefaults();
         var parser = commandLineBuilder.Build();
         await parser.InvokeAsync(args);
+
+        await Serilog.Log.CloseAndFlushAsync();
     }
 }
