@@ -1,5 +1,11 @@
 #!/bin/sh -e
 
-# Unmount all locations before removing the snap
+# Remove remaining systemd-mount units from the system
+if [ -n "$(find /usr/lib/systemd/system/ -type f -name 'var-snap-dotnet-common-dotnet-*.mount')" ]; then
+    systemctl stop var-snap-dotnet-common-dotnet-*.mount
+    rm /usr/lib/systemd/system/var-snap-dotnet-common-dotnet-*.mount
+fi
+
+# Remove left-over content snaps
 # shellcheck disable=SC2046
-umount -f $(mount | grep /var/snap/dotnet/common | awk '{print $3}')
+snap remove $(snap list | grep 'dotnet-*' | awk '{print $1}')
