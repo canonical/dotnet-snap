@@ -100,4 +100,3 @@ apps:
     environment:
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
       # LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib/x86_64-linux-gnu
-      SERVER_URL: https://raw.githubusercontent.com/canonical/dotnet-manifest/main/

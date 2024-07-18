@@ -4,7 +4,7 @@ import sys
 import json
 
 
-def run_elevated(command_to_execute, dotnet_install_dir, server_url) -> subprocess.CompletedProcess[str]:
+def run_elevated(command_to_execute, dotnet_install_dir) -> subprocess.CompletedProcess[str]:
     process_euid = int(subprocess.check_output(["id", "-u"]).strip())
 
     if process_euid == 0:
@@ -12,18 +12,26 @@ def run_elevated(command_to_execute, dotnet_install_dir, server_url) -> subproce
     else:
         if os.path.exists("/usr/bin/pkexec"):
             process_result = subprocess.run(["pkexec"] + command_to_execute,
-                                            env={"DOTNET_INSTALL_DIR": dotnet_install_dir, "SERVER_URL": server_url},
+                                            env={"DOTNET_INSTALL_DIR": dotnet_install_dir},
                                             check=False)
         else:
-            process_result = subprocess.run(["sudo", "--preserve-env=DOTNET_INSTALL_DIR,SERVER_URL"]
+            process_result = subprocess.run(["sudo", "--preserve-env=DOTNET_INSTALL_DIR"]
                                             + command_to_execute,
-                                            env={"DOTNET_INSTALL_DIR": dotnet_install_dir, "SERVER_URL": server_url},
+                                            env={"DOTNET_INSTALL_DIR": dotnet_install_dir},
                                             check=False)
 
     return process_result
 
 
 if __name__ == "__main__":
+    # We need to install the dotnet-manifest content snap before anything
+    if not os.path.exists("/snap/dotnet-manifest/current/supported.json"):
+        result = run_elevated(["snap", "install", "dotnet-manifest"],
+                              os.environ.get("DOTNET_INSTALL_DIR"))
+
+        if result.returncode != 0:
+            sys.exit(result.returncode)
+
     if len(sys.argv) > 1 and sys.argv[1] == "installer":
         # Pass second argument onwards to .NET installer tool.
         command_to_execute = [os.environ.get("SNAP") + "/Dotnet.Installer.Console"] + sys.argv[2:]
@@ -32,8 +40,7 @@ if __name__ == "__main__":
 
         if len(sys.argv) > 2 and sys.argv[2] in need_elevation_commands:
             result = run_elevated(command_to_execute,
-                                  os.environ.get("DOTNET_INSTALL_DIR"),
-                                  os.environ.get("SERVER_URL"))
+                                  os.environ.get("DOTNET_INSTALL_DIR"))
         else:
             result = subprocess.run(command_to_execute, check=False)
     else:
@@ -51,8 +58,7 @@ if __name__ == "__main__":
 
             command_to_execute = [os.environ.get("SNAP") + "/Dotnet.Installer.Console", "install", "sdk", "latest"]
             result = run_elevated(command_to_execute,
-                                  os.environ.get("DOTNET_INSTALL_DIR"),
-                                  os.environ.get("SERVER_URL"))
+                                  os.environ.get("DOTNET_INSTALL_DIR"))
 
             if result.returncode != 0:
                 print("Could not install the latest .NET SDK.")
