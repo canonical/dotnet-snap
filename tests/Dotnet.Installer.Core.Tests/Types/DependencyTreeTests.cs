@@ -17,11 +17,10 @@ public class DependencyTreeTests
             MajorVersion = 8,
             Dependencies = [],
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
-        
+
         var component2 = new Component
         {
             Key = "key2",
@@ -30,11 +29,10 @@ public class DependencyTreeTests
             MajorVersion = 8,
             Dependencies = [ "key1" ],
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
-        
+
         var component3 = new Component
         {
             Key = "key3",
@@ -43,18 +41,17 @@ public class DependencyTreeTests
             MajorVersion = 8,
             Dependencies = [ "key2" ],
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
 
         var dependencyTree = new DependencyTree([component1, component2, component3]);
-        
+
         // Act
         var reverseDependencies1 = dependencyTree.GetReverseDependencies("key1");
         var reverseDependencies2 = dependencyTree.GetReverseDependencies("key2");
         var reverseDependencies3 = dependencyTree.GetReverseDependencies("key3");
-        
+
         // Assert
         Assert.Equal(2, reverseDependencies1.Count);
         Assert.Single(reverseDependencies2);

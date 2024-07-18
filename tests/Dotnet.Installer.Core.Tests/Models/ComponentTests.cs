@@ -19,7 +19,6 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -39,7 +38,7 @@ public class ComponentTests
         Assert.Equal(component, evt.Sender);
         Assert.Equivalent(new InstallationStartedEventArgs(component.Key), evt.Arguments);
     }
-    
+
     [Fact]
     public async Task Install_WithValidVersions_ShouldInvokeInstallationFinishedEvent()
     {
@@ -53,7 +52,6 @@ public class ComponentTests
             MajorVersion = 8,
             IsLts = false,
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             EndOfLife = DateTime.Now
         };
 
@@ -86,7 +84,6 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -98,7 +95,6 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -110,11 +106,10 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now
         };
-        
+
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
@@ -126,7 +121,7 @@ public class ComponentTests
             {
                 installedComponents.Add(c.Key);
             });
-        
+
         // Act
         await component1.Install(fileService.Object, manifestService.Object, snapService.Object);
 
@@ -148,7 +143,6 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             DotnetRoot = "/",
-            MountPoints = ["mp1"],
             IsLts = false,
             EndOfLife = DateTime.Now,
             Installation = new Installation
@@ -156,7 +150,7 @@ public class ComponentTests
                 InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3))
             }
         };
-        
+
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
@@ -169,9 +163,9 @@ public class ComponentTests
             {
                 installedComponents.Remove(c);
             });
-        
+
         installedComponents.Add(component1);
-        
+
         // Act
         await component1.Uninstall(fileService.Object, manifestService.Object, snapService.Object);
 
