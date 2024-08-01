@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text;
+using System.Text.Json.Serialization;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
@@ -18,6 +19,9 @@ public class Component
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
 
+    [JsonIgnore]
+    private string MountsFileName => $"{Key}.mounts";
+
     public event EventHandler<InstallationStartedEventArgs>? InstallationStarted;
     public event EventHandler<InstallationFinishedEventArgs>? InstallationFinished;
 
@@ -36,16 +40,7 @@ public class Component
             }
 
             // Install Systemd mount units
-            var unitPaths =
-                Directory.EnumerateFiles(Path.Join("/", "snap", Key, "current", "mounts"));
-            foreach (var unitPath in unitPaths)
-            {
-                logger?.LogDebug($"Copying {unitPath} to systemd directory.");
-                fileService.InstallSystemdMountUnit(unitPath);
-            }
-
-            // Mount component locations
-            await Mount(fileService, manifestService, logger);
+            await PlaceUnits(fileService, manifestService, logger);
 
             // Register the installation of this component in the local manifest file
             await manifestService.Add(this);
@@ -73,17 +68,8 @@ public class Component
     {
         if (Installation is not null)
         {
-            await Unmount(fileService, manifestService, logger);
-
             // Uninstall systemd mount units
-            var unitPaths =
-                Directory.EnumerateFiles(Path.Join("/", "snap", Key, "current", "mounts"));
-            foreach (var unitPath in unitPaths)
-            {
-                var unitName = unitPath.Split('/').Last();
-                logger?.LogDebug($"Removing {unitName} from systemd directory.");
-                fileService.UninstallSystemdMountUnit(unitName);
-            }
+            await RemoveUnits(fileService, manifestService, logger);
 
             if (snapService.IsSnapInstalled(Key))
             {
@@ -98,35 +84,71 @@ public class Component
         }
     }
 
-    public async Task Mount(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
+    public async Task PlaceUnits(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
     {
-        var units = Directory.EnumerateFiles(
-            Path.Join("/", "snap", Key, "current", "mounts"));
+        var units = new StringBuilder();
+        var unitPaths =
+            Directory.EnumerateFiles(Path.Join("/", "snap", Key, "current", "mounts"));
+
+        foreach (var unitPath in unitPaths)
+        {
+            logger?.LogDebug($"Copying {unitPath} to systemd directory.");
+            fileService.InstallSystemdMountUnit(unitPath);
+            units.AppendLine(unitPath.Split('/').Last());
+        }
+
+        // Save unit names to component .mounts file
+        await File.WriteAllTextAsync(
+            Path.Join(manifestService.SnapConfigurationLocation, MountsFileName),
+            units.ToString(),
+            Encoding.UTF8);
+
+        await Terminal.Invoke("systemctl", "daemon-reload");
+        await Mount(fileService, manifestService, logger);
+    }
+
+    public async Task RemoveUnits(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
+    {
+        await Unmount(fileService, manifestService, logger);
+
+        var units = await File.ReadAllLinesAsync(
+            Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
 
         foreach (var unit in units)
         {
-            var unitName = unit.Split('/').Last();
+            logger?.LogDebug($"Removing {unit} from systemd directory.");
+            fileService.UninstallSystemdMountUnit(unit);
+        }
 
-            await Terminal.Invoke("systemctl", "enable", unitName);
-            logger?.LogDebug($"Enabled {unitName}");
-            await Terminal.Invoke("systemctl", "start", unitName);
-            logger?.LogDebug($"Started {unitName}");
+        await Terminal.Invoke("systemctl", "daemon-reload");
+        File.Delete(Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
+    }
+
+    public async Task Mount(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
+    {
+        var units = await File.ReadAllLinesAsync(
+            Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
+
+        foreach (var unit in units)
+        {
+            await Terminal.Invoke("systemctl", "enable", unit);
+            logger?.LogDebug($"Enabled {unit}");
+            await Terminal.Invoke("systemctl", "start", unit);
+            logger?.LogDebug($"Started {unit}");
         }
     }
 
     public async Task Unmount(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
     {
-        var units = Directory.EnumerateFiles(
-            Path.Join("/", "snap", Key, "current", "mounts"));
+        var units = await File.ReadAllLinesAsync(
+            Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
 
         foreach (var unit in units)
         {
-            var unitName = unit.Split('/').Last();
-
-            await Terminal.Invoke("systemctl", "disable", unitName);
-            logger?.LogDebug($"Disabled {unitName}");
-            await Terminal.Invoke("systemctl", "stop", unitName);
-            logger?.LogDebug($"Unmounted {unitName}");
+            await Terminal.Invoke("systemctl", "disable", unit);
+            logger?.LogDebug($"Disabled {unit}");
+            await Terminal.Invoke("systemctl", "stop", unit);
+            logger?.LogDebug($"Unmounted {unit}");
         }
     }
 }
