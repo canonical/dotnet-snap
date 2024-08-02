@@ -89,41 +89,57 @@ public class EnvironmentCommand : Command
 
     private async Task HandlePlaceUnits(string snapName, bool allSnaps, IFileService fileService, IManifestService manifestService, ILogger logger)
     {
-        await manifestService.Initialize();
-        var components = manifestService.Local.Where(c =>
-                c.Key.Equals(snapName, StringComparison.CurrentCultureIgnoreCase) || allSnaps)
-            .ToList();
-
-        logger.LogDebug($"Found {components.Count} snaps.");
-        if (components.Count == 0 && !allSnaps)
+        try
         {
-            throw new ApplicationException($"Snap {snapName} could not be found.");
+            await manifestService.Initialize();
+            var components = manifestService.Local.Where(c =>
+                    c.Key.Equals(snapName, StringComparison.CurrentCultureIgnoreCase) || allSnaps)
+                .ToList();
+
+            logger.LogDebug($"Found {components.Count} snaps.");
+            if (components.Count == 0 && !allSnaps)
+            {
+                throw new ApplicationException($"Snap {snapName} could not be found.");
+            }
+
+            foreach (var component in components)
+            {
+                await component.PlaceMountUnits(fileService, manifestService, logger);
+                logger.LogDebug($"Placed units from snap {component.Key}");
+            }
         }
-
-        foreach (var component in components)
+        catch (Exception e)
         {
-            await component.PlaceUnits(fileService, manifestService, logger);
-            logger.LogDebug($"Placed units from snap {component.Key}");
+            logger.LogError(e.Message);
+            Environment.Exit(-1);
         }
     }
 
     private async Task HandleRemoveUnits(string snapName, bool allSnaps, IFileService fileService, IManifestService manifestService, ILogger logger)
     {
-        await manifestService.Initialize();
-        var components = manifestService.Local.Where(c =>
-                c.Key.Equals(snapName, StringComparison.CurrentCultureIgnoreCase) || allSnaps)
-            .ToList();
-
-        logger.LogDebug($"Found {components.Count} snaps.");
-        if (components.Count == 0 && !allSnaps)
+        try
         {
-            throw new ApplicationException($"Snap {snapName} could not be found.");
+            await manifestService.Initialize();
+            var components = manifestService.Local.Where(c =>
+                    c.Key.Equals(snapName, StringComparison.CurrentCultureIgnoreCase) || allSnaps)
+                .ToList();
+
+            logger.LogDebug($"Found {components.Count} snaps.");
+            if (components.Count == 0 && !allSnaps)
+            {
+                throw new ApplicationException($"Snap {snapName} could not be found.");
+            }
+
+            foreach (var component in components)
+            {
+                await component.RemoveMountUnits(fileService, manifestService, logger);
+                logger.LogDebug($"Removed units from snap {component.Key}");
+            }
         }
-
-        foreach (var component in components)
+        catch (Exception e)
         {
-            await component.RemoveUnits(fileService, manifestService, logger);
-            logger.LogDebug($"Removed units from snap {component.Key}");
+            logger.LogError(e.Message);
+            Environment.Exit(-1);
         }
     }
 
