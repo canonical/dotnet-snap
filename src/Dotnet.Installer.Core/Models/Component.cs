@@ -39,8 +39,17 @@ public class Component
                 if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
             }
 
+            // Place linking file in the content snap's $SNAP_COMMON
+            await File.WriteAllTextAsync(
+                Path.Join("/", "var", "snap", Key, "common", "dotnet-installer"),
+                "installer linkage ok",
+                Encoding.UTF8);
+
             // Install Systemd mount units
-            await PlaceUnits(fileService, manifestService, logger);
+            await PlaceMountUnits(fileService, manifestService, logger);
+
+            // Install update watcher unit
+            await PlacePathUnits(fileService, logger);
 
             // Register the installation of this component in the local manifest file
             await manifestService.Add(this);
@@ -69,7 +78,10 @@ public class Component
         if (Installation is not null)
         {
             // Uninstall systemd mount units
-            await RemoveUnits(fileService, manifestService, logger);
+            await RemoveMountUnits(fileService, manifestService, logger);
+
+            // Uninstall systemd path units
+            await RemovePathUnits(fileService, logger);
 
             if (snapService.IsSnapInstalled(Key))
             {
@@ -84,7 +96,7 @@ public class Component
         }
     }
 
-    public async Task PlaceUnits(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
+    public async Task PlaceMountUnits(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
     {
         var units = new StringBuilder();
         var unitPaths =
@@ -103,11 +115,16 @@ public class Component
             units.ToString(),
             Encoding.UTF8);
 
-        await Terminal.Invoke("systemctl", "daemon-reload");
+        var result = await Terminal.Invoke("systemctl", "daemon-reload");
+        if (result != 0)
+        {
+            throw new ApplicationException("Could not reload systemd daemon");
+        }
         await Mount(fileService, manifestService, logger);
     }
 
-    public async Task RemoveUnits(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
+    public async Task RemoveMountUnits(IFileService fileService, IManifestService manifestService,
+        ILogger? logger = default)
     {
         await Unmount(fileService, manifestService, logger);
 
@@ -120,8 +137,13 @@ public class Component
             fileService.UninstallSystemdMountUnit(unit);
         }
 
-        await Terminal.Invoke("systemctl", "daemon-reload");
         File.Delete(Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
+
+        var result = await Terminal.Invoke("systemctl", "daemon-reload");
+        if (result != 0)
+        {
+            throw new ApplicationException("Could not reload systemd daemon");
+        }
     }
 
     public async Task Mount(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
@@ -131,10 +153,21 @@ public class Component
 
         foreach (var unit in units)
         {
-            await Terminal.Invoke("systemctl", "enable", unit);
+            var result = await Terminal.Invoke("systemctl", "enable", unit);
+            if (result != 0)
+            {
+                throw new ApplicationException($"Could not enable unit {unit}");
+            }
             logger?.LogDebug($"Enabled {unit}");
-            await Terminal.Invoke("systemctl", "start", unit);
+
+            result = await Terminal.Invoke("systemctl", "start", unit);
+            if (result != 0)
+            {
+                throw new ApplicationException($"Could not start unit {unit}");
+            }
             logger?.LogDebug($"Started {unit}");
+
+            logger?.LogDebug($"Finished mounting {unit}");
         }
     }
 
@@ -145,10 +178,73 @@ public class Component
 
         foreach (var unit in units)
         {
-            await Terminal.Invoke("systemctl", "disable", unit);
+            var result = await Terminal.Invoke("systemctl", "disable", unit);
+            if (result != 0)
+            {
+                throw new ApplicationException($"Could not disable unit {unit}");
+            }
             logger?.LogDebug($"Disabled {unit}");
-            await Terminal.Invoke("systemctl", "stop", unit);
-            logger?.LogDebug($"Unmounted {unit}");
+
+            result = await Terminal.Invoke("systemctl", "stop", unit);
+            if (result != 0)
+            {
+                throw new ApplicationException($"Could not stop unit {unit}");
+            }
+            logger?.LogDebug($"Stopped {unit}");
+
+            logger?.LogDebug($"Finished unmounting {unit}");
+        }
+    }
+
+    private async Task PlacePathUnits(IFileService fileService, ILogger? logger = default)
+    {
+        fileService.InstallSystemdPathUnit(Key);
+        logger?.LogDebug($"Placed upgrade watcher path and service units for snap {Key}");
+
+        var result = await Terminal.Invoke("systemctl", "daemon-reload");
+        if (result != 0)
+        {
+            throw new ApplicationException("Could not reload systemd daemon");
+        }
+
+        result = await Terminal.Invoke("systemctl", "enable", $"{Key}-update-watcher.path");
+        if (result != 0)
+        {
+            throw new ApplicationException($"Could not enable {Key}-update-watcher.path");
+        }
+        logger?.LogDebug($"Enabled {Key}-update-watcher.path");
+
+        result = await Terminal.Invoke("systemctl", "start", $"{Key}-update-watcher.path");
+        if (result != 0)
+        {
+            throw new ApplicationException($"Could not start {Key}-update-watcher.path");
+        }
+        logger?.LogDebug($"Started {Key}-update-watcher.path");
+    }
+
+    private async Task RemovePathUnits(IFileService fileService, ILogger? logger = default)
+    {
+        var result = await Terminal.Invoke("systemctl", "disable", $"{Key}-update-watcher.path");
+        if (result != 0)
+        {
+            throw new ApplicationException($"Could not disable {Key}-update-watcher.path");
+        }
+        logger?.LogDebug($"Disabled {Key}-update-watcher.path");
+
+        result = await Terminal.Invoke("systemctl", "stop", $"{Key}-update-watcher.path");
+        if (result != 0)
+        {
+            throw new ApplicationException($"Could not stop {Key}-update-watcher.path");
+        }
+        logger?.LogDebug($"Stopped {Key}-update-watcher.path");
+
+        fileService.UninstallSystemdPathUnit(Key);
+        logger?.LogDebug($"Removed upgrade watcher path and service units for snap {Key}");
+
+        result = await Terminal.Invoke("systemctl", "daemon-reload");
+        if (result != 0)
+        {
+            throw new ApplicationException("Could not reload systemd daemon");
         }
     }
 }

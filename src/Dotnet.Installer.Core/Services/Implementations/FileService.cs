@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
@@ -24,6 +25,31 @@ public class FileService : IFileService
         var unitPath = Path.Join("/", "usr", "lib", "systemd", "system", unitName);
 
         if (File.Exists(unitPath)) File.Delete(unitPath);
+    }
+
+    public void InstallSystemdPathUnit(string snapName)
+    {
+        var destination = Path.Join("/", "usr", "lib", "systemd", "system");
+        var unitsLocation = Path.Join("/", "snap", "dotnet", "current", "Scripts");
+        var unitFilesInLocation = Directory.GetFiles(unitsLocation, "{SNAP}*");
+        foreach (var unitFile in unitFilesInLocation)
+        {
+            var originFilePath = unitFile.Replace("{SNAP}", snapName);
+            var fileContent = File.ReadAllText(unitFile).Replace("{SNAP}", snapName);
+            File.WriteAllText(Path.Join(destination, originFilePath.Split('/').Last()), fileContent, Encoding.UTF8);
+        }
+    }
+
+    public void UninstallSystemdPathUnit(string snapName)
+    {
+        var destination = Path.Join("/", "usr", "lib", "systemd", "system");
+        var unitsLocation = Path.Join("/", "snap", "dotnet", "current", "Scripts");
+        var unitFilesInLocation = Directory.GetFiles(unitsLocation, "{SNAP}*");
+        foreach (var unitFile in unitFilesInLocation)
+        {
+            var originFilePath = unitFile.Replace("{SNAP}", snapName);
+            File.Delete(Path.Join(destination, originFilePath.Split('/').Last()));
+        }
     }
 
     /// <summary>

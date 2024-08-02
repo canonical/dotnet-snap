@@ -1,0 +1,8 @@
+[Unit]
+Description=needs-update watcher for {SNAP}
+
+[Path]
+PathExists=/var/snap/{SNAP}/common/needs-update
+
+[Install]
+WantedBy=multi-user.target
