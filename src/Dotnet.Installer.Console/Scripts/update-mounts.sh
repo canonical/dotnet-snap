@@ -35,11 +35,11 @@ run_command "/snap/bin/dotnet installer environment remove-units --snap $snap --
 # Place new mount unit files
 run_command "/snap/bin/dotnet installer environment place-units --snap $snap --verbose" "Placing new mount unit files"
 
-# Remove needs-update file
-needs_update_file="/var/snap/$snap/common/needs-update"
+# Remove dotnet-installer-update-mounts file
+needs_update_file="/var/snap/$snap/common/dotnet-installer-update-mounts"
 if [ -f "$needs_update_file" ]; then
     rm "$needs_update_file"
-    echo "Removed needs-update file for $snap"
+    echo "Removed dotnet-installer-update-mounts file for $snap"
 else
-    echo "No needs-update file found for $snap"
+    echo "No dotnet-installer-update-mounts file found for $snap"
 fi

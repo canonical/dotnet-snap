@@ -1,8 +1,8 @@
 [Unit]
-Description=needs-update watcher for {SNAP}
+Description=dotnet-installer-update-mounts watcher for {SNAP}
 
 [Path]
-PathExists=/var/snap/{SNAP}/common/needs-update
+PathExists=/var/snap/{SNAP}/common/dotnet-installer-update-mounts
 
 [Install]
 WantedBy=multi-user.target
