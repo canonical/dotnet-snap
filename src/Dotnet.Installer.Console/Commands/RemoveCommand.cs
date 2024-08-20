@@ -51,56 +51,50 @@ public class RemoveCommand : Command
     {
         try
         {
-            if (Directory.Exists(_manifestService.DotnetInstallLocation))
+            if (!Directory.Exists(_manifestService.DotnetInstallLocation))
             {
-                await _manifestService.Initialize();
-
-                var requestedComponent = version switch
-                {
-                    "latest" => _manifestService.Remote
-                        .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                        .MaxBy(c => c.MajorVersion),
-                    _ => _manifestService.MatchVersion(component, version)
-                };
-
-                if (requestedComponent is null)
-                {
-                    _logger.LogError($"The requested component {component} {version} does not exist.");
-                    Environment.Exit(-1);
-                }
-
-                var dependencyTree = new DependencyTree(_manifestService.Local);
-                var reverseDependencies =
-                    dependencyTree.GetReverseDependencies(requestedComponent.Key);
-
-                if (reverseDependencies.Count != 0 && !yesOption)
-                {
-                    var confirmationPrompt = new StringBuilder();
-                    confirmationPrompt.AppendLine("This will also remove:");
-                    foreach (var reverseDependency in reverseDependencies)
-                    {
-                        confirmationPrompt.AppendLine($"\t* {reverseDependency.Key}");
-                    }
-
-                    confirmationPrompt.AppendLine("Continue?");
-
-                    if (!AnsiConsole.Confirm(confirmationPrompt.ToString(), defaultValue: false))
-                    {
-                        return;
-                    }
-                }
-
-                await requestedComponent.Uninstall(_fileService, _manifestService, _snapService, _logger);
-                foreach (var reverseDependency in reverseDependencies)
-                {
-                    await reverseDependency.Uninstall(_fileService, _manifestService, _snapService, _logger);
-                }
-
-                return;
+                _logger.LogError($"The directory {_manifestService.DotnetInstallLocation} does not exist");
+                Environment.Exit(-1);
             }
 
-            _logger.LogError($"The directory {_manifestService.DotnetInstallLocation} does not exist");
-            Environment.Exit(-1);
+            await _manifestService.Initialize();
+
+            var requestedComponent = version switch
+            {
+                "latest" => _manifestService.Remote
+                    .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                    .MaxBy(c => c.MajorVersion),
+                _ => _manifestService.MatchVersion(component, version)
+            };
+
+            if (requestedComponent is null)
+            {
+                _logger.LogError($"The requested component {component} {version} does not exist.");
+                Environment.Exit(-1);
+            }
+
+            var dependencyTree = new DependencyTree(_manifestService.Local);
+            var reverseDependencies =
+                dependencyTree.GetReverseDependencies(requestedComponent.Key);
+
+            if (reverseDependencies.Count != 0 && !yesOption)
+            {
+                var confirmationPrompt = new StringBuilder();
+                confirmationPrompt.AppendLine("The component you are uninstalling also includes:");
+                foreach (var reverseDependency in reverseDependencies)
+                {
+                    confirmationPrompt.AppendLine($"\t* {reverseDependency.Key}");
+                }
+
+                confirmationPrompt.AppendLine("Continue?");
+
+                if (!AnsiConsole.Confirm(confirmationPrompt.ToString(), defaultValue: false))
+                {
+                    return;
+                }
+            }
+
+            await requestedComponent.Uninstall(_fileService, _manifestService, _snapService, _logger);
         }
         catch (ApplicationException ex)
         {

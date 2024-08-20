@@ -42,7 +42,7 @@ public class Component
             // Place linking file in the content snap's $SNAP_COMMON
             await File.WriteAllTextAsync(
                 Path.Join("/", "var", "snap", Key, "common", "dotnet-installer"),
-                "installer linkage ok",
+                "installer linkage ok\n",
                 Encoding.UTF8);
 
             // Install Systemd mount units
@@ -53,23 +53,13 @@ public class Component
 
             // Register the installation of this component in the local manifest file
             await manifestService.Add(this);
+
+            InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
         }
         else
         {
             logger?.LogInformation($"{Key} already installed!");
         }
-
-        foreach (var dependency in Dependencies)
-        {
-            var component = manifestService.Remote.First(c => c.Key == dependency);
-
-            component.InstallationStarted += InstallationStarted;
-            component.InstallationFinished += InstallationFinished;
-
-            await component.Install(fileService, manifestService, snapService, logger);
-        }
-
-        InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
     }
 
     public async Task Uninstall(IFileService fileService, IManifestService manifestService, ISnapService snapService,
@@ -87,9 +77,6 @@ public class Component
             {
                 await snapService.Remove(Key, purge: true);
             }
-
-            // Check for any empty directories
-            fileService.RemoveEmptyDirectories(manifestService.DotnetInstallLocation);
 
             Installation = null;
             await manifestService.Remove(this);
@@ -194,6 +181,10 @@ public class Component
 
             logger?.LogDebug($"Finished unmounting {unit}");
         }
+
+        // Check for any empty directories
+        fileService.RemoveEmptyDirectories(manifestService.DotnetInstallLocation);
+        logger?.LogDebug("Removed empty directories.");
     }
 
     private async Task PlacePathUnits(IFileService fileService, ILogger? logger = default)
