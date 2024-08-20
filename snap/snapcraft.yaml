@@ -1,6 +1,6 @@
 name: dotnet
 base: core22
-version: 8.0.7
+adopt-info: dotnet-installer
 summary: .NET CLI tools, SDK and runtime
 description: |
   .NET is the free, open-source, cross-platform framework for building modern
@@ -50,6 +50,8 @@ parts:
     #   - libssl3
     override-build: |
       /usr/bin/dotnet --info
+      SNAP_VERSION=$(/usr/bin/dotnet --list-runtimes | grep NETCore.App | awk '{print $2}' | sort -r | head -n 1)
+      craftctl set version="$SNAP_VERSION"
       
       if [ "${CRAFT_ARCH_BUILD_FOR}" = "amd64" ]; then
         RUNTIME_RID="linux-x64"
