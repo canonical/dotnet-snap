@@ -3,9 +3,21 @@
 # Remove remaining systemd-mount units from the system
 if [ -n "$(find /usr/lib/systemd/system/ -type f -name 'var-snap-dotnet-common-dotnet-*.mount')" ]; then
     systemctl stop var-snap-dotnet-common-dotnet-*.mount
+    systemctl disable var-snap-dotnet-common-dotnet-*.mount
     rm /usr/lib/systemd/system/var-snap-dotnet-common-dotnet-*.mount
+fi
+
+# Remove remaining systemd-path units from the system
+if [ -n "$(find /usr/lib/systemd/system/ -type f -name '*-update-watcher.*')" ]; then
+    # shellcheck disable=SC2035
+    systemctl stop *-update-watcher.*
+    # shellcheck disable=SC2035
+    systemctl disable *-update-watcher.*
+    rm /usr/lib/systemd/system/*-update-watcher.*
 fi
 
 # Remove left-over content snaps
 # shellcheck disable=SC2046
 snap remove $(snap list | grep 'dotnet-*' | awk '{print $1}')
+# shellcheck disable=SC2046
+snap remove $(snap list | grep 'aspnetcore-*' | awk '{print $1}')
