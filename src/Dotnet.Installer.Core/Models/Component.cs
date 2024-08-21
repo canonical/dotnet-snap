@@ -32,6 +32,19 @@ public class Component
         {
             InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
 
+            if (!CanInstall(manifestService, out var componentKeyToRemove))
+            {
+                logger?.LogInformation($"A component that contains {Description} is already installed.");
+                return;
+            }
+
+            if (componentKeyToRemove is not null)
+            {
+                logger?.LogDebug($"Removing component {componentKeyToRemove} before installing {Key}.");
+                var componentToRemove = manifestService.Local.First(x => x.Key == componentKeyToRemove);
+                await componentToRemove.Uninstall(fileService, manifestService, snapService, logger);
+            }
+
             // Install content snap on the machine
             if (!snapService.IsSnapInstalled(Key))
             {
@@ -237,5 +250,71 @@ public class Component
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
+    }
+
+    /// <summary>
+    /// Determines whether a component can be installed based on the components already installed.
+    /// The return value of this function indicates whether this component can be installed or not. It also includes
+    /// a <c>componentKeyToRemove</c> out-parameter that indicates whether a component must be removed before installing
+    /// this component.
+    /// </summary>
+    /// <param name="manifestService">The manifest service.</param>
+    /// <param name="componentKeyToRemove">The key of the component to remove.</param>
+    /// <param name="logger">A logger object.</param>
+    /// <returns>Whether the current component can be installed.</returns>
+    private bool CanInstall(IManifestService manifestService, out string? componentKeyToRemove)
+    {
+        componentKeyToRemove = null;
+
+        // We will always only have on component per major version installed by design.
+        // So, FirstOrDefault() should either return that one component or none.
+        var installedComponentOfSameMajorVersion = manifestService.Local.FirstOrDefault(
+            c => c.MajorVersion == MajorVersion);
+
+        // We don't have any component of that major version installed.
+        if (installedComponentOfSameMajorVersion is null)
+        {
+            return true;
+        }
+
+        // Get all the dependencies of the installed component.
+        // If this component is there, then the installed component is higher in the chain.
+        var dependenciesOfInstalledComponent =
+            installedComponentOfSameMajorVersion.GetAllDependencies(manifestService);
+
+        if (dependenciesOfInstalledComponent.Contains(Key))
+        {
+            return false;
+        }
+
+        componentKeyToRemove = installedComponentOfSameMajorVersion.Key;
+        return true;
+    }
+
+    /// <summary>
+    /// Gets all the dependencies of the current component, as well as all the dependencies of the dependencies
+    /// of the current component all the way down to the last component in the chain recursively.
+    /// </summary>
+    /// <param name="manifestService">The manifest service.</param>
+    /// <returns>A list of the component keys of all dependencies of this component and their dependencies.</returns>
+    /// <exception cref="ApplicationException">When a key of dependent component is not found in the manifest.</exception>
+    private IEnumerable<string> GetAllDependencies(IManifestService manifestService)
+    {
+        var result = new HashSet<string>();
+        foreach (var dependency in Dependencies)
+        {
+            result.Add(dependency);
+            var component = manifestService.Merged.FirstOrDefault(c => c.Key.Equals(dependency));
+
+            if (component is null)
+            {
+                throw new ApplicationException($"Could not find dependency component {dependency}");
+            }
+
+            foreach (var subDependency in component.GetAllDependencies(manifestService))
+                result.Add(subDependency);
+        }
+
+        return result;
     }
 }
