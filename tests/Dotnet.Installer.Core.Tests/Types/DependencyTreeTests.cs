@@ -16,7 +16,6 @@ public class DependencyTreeTests
             Description = "Component 1",
             MajorVersion = 8,
             Dependencies = [],
-            DotnetRoot = "/",
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -28,7 +27,6 @@ public class DependencyTreeTests
             Description = "Component 2",
             MajorVersion = 8,
             Dependencies = [ "key1" ],
-            DotnetRoot = "/",
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -40,7 +38,6 @@ public class DependencyTreeTests
             Description = "Component 3",
             MajorVersion = 8,
             Dependencies = [ "key2" ],
-            DotnetRoot = "/",
             IsLts = false,
             EndOfLife = DateTime.Now
         };

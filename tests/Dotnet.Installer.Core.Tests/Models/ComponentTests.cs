@@ -18,7 +18,6 @@ public class ComponentTests
             Key = "key1",
             Name = "name",
             MajorVersion = 8,
-            DotnetRoot = "/",
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -51,7 +50,6 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
-            DotnetRoot = "/",
             EndOfLife = DateTime.Now
         };
 
@@ -83,7 +81,6 @@ public class ComponentTests
             Key = "key1",
             Name = "name",
             MajorVersion = 8,
-            DotnetRoot = "/",
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -94,7 +91,6 @@ public class ComponentTests
             Key = "key2",
             Name = "name",
             MajorVersion = 8,
-            DotnetRoot = "/",
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -105,7 +101,6 @@ public class ComponentTests
             Key = "key3",
             Name = "name",
             MajorVersion = 8,
-            DotnetRoot = "/",
             IsLts = false,
             EndOfLife = DateTime.Now
         };
@@ -142,7 +137,6 @@ public class ComponentTests
             Key = "key1",
             Name = "name",
             MajorVersion = 8,
-            DotnetRoot = "/",
             IsLts = false,
             EndOfLife = DateTime.Now,
             Installation = new Installation

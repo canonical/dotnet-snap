@@ -15,7 +15,6 @@ public class Component
     public required bool IsLts { get; init; }
     [JsonPropertyName("eol")]
     public required DateTime EndOfLife { get; init; }
-    public required string DotnetRoot { get; init; }
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
 
