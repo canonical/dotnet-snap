@@ -7,7 +7,8 @@ namespace Dotnet.Installer.Console.Commands;
 
 public class EnvironmentCommand : Command
 {
-    public EnvironmentCommand(IFileService fileService, IManifestService manifestService, ILogger logger)
+    public EnvironmentCommand(IFileService fileService, IManifestService manifestService,
+        ISystemDService systemDService, ILogger logger)
         : base("environment", "Gets information about the current environment.")
     {
         IsHidden = true;
@@ -29,10 +30,10 @@ public class EnvironmentCommand : Command
         infoCommand.SetHandler(HandleInfo);
 
         var mountCommand = new Command("mount", "Mounts all available .NET locations.");
-        mountCommand.SetHandler(() => HandleMount(fileService, manifestService, logger));
+        mountCommand.SetHandler(() => HandleMount(fileService, manifestService, systemDService, logger));
 
         var unmountCommand = new Command("unmount", "Unmounts all current .NET bind-mounts.");
-        unmountCommand.SetHandler(() => HandleUnmount(fileService, manifestService, logger));
+        unmountCommand.SetHandler(() => HandleUnmount(fileService, manifestService, systemDService, logger));
 
         var placeUnitsCommand = new Command("place-units", "Installs all systemd-mount units in the system.")
         {
@@ -40,7 +41,7 @@ public class EnvironmentCommand : Command
             allOption
         };
         placeUnitsCommand.SetHandler((snapOptionValue, allOptionValue) =>
-            HandlePlaceUnits(snapOptionValue, allOptionValue, fileService, manifestService, logger),
+            HandlePlaceUnits(snapOptionValue, allOptionValue, fileService, manifestService, systemDService, logger),
                 snapOption, allOption);
 
         var removeUnitsCommand = new Command("remove-units", "Removes all systemd-mount units from the system.")
@@ -49,7 +50,7 @@ public class EnvironmentCommand : Command
             allOption
         };
         removeUnitsCommand.SetHandler((snapOptionValue, allOptionValue) =>
-            HandleRemoveUnits(snapOptionValue, allOptionValue, fileService, manifestService, logger),
+            HandleRemoveUnits(snapOptionValue, allOptionValue, fileService, manifestService, systemDService, logger),
                 snapOption, allOption);
 
         AddCommand(infoCommand);
@@ -69,25 +70,28 @@ public class EnvironmentCommand : Command
         System.Console.Write(environment);
     }
 
-    private async Task HandleMount(IFileService fileService, IManifestService manifestService, ILogger logger)
+    private async Task HandleMount(IFileService fileService, IManifestService manifestService,
+        ISystemDService systemDService, ILogger logger)
     {
         await manifestService.Initialize();
         foreach (var installedComponent in manifestService.Local)
         {
-            await installedComponent.Mount(fileService, manifestService, logger);
+            await installedComponent.Mount(manifestService, fileService, systemDService, logger);
         }
     }
 
-    private async Task HandleUnmount(IFileService fileService, IManifestService manifestService, ILogger logger)
+    private async Task HandleUnmount(IFileService fileService, IManifestService manifestService,
+        ISystemDService systemDService, ILogger logger)
     {
         await manifestService.Initialize();
         foreach (var installedComponent in manifestService.Local)
         {
-            await installedComponent.Unmount(fileService, manifestService, logger);
+            await installedComponent.Unmount(fileService, manifestService, systemDService, logger);
         }
     }
 
-    private async Task HandlePlaceUnits(string snapName, bool allSnaps, IFileService fileService, IManifestService manifestService, ILogger logger)
+    private async Task HandlePlaceUnits(string snapName, bool allSnaps, IFileService fileService,
+        IManifestService manifestService, ISystemDService systemDService, ILogger logger)
     {
         try
         {
@@ -104,7 +108,7 @@ public class EnvironmentCommand : Command
 
             foreach (var component in components)
             {
-                await component.PlaceMountUnits(fileService, manifestService, logger);
+                await component.PlaceMountUnits(fileService, manifestService, systemDService, logger);
                 logger.LogDebug($"Placed units from snap {component.Key}");
             }
         }
@@ -115,7 +119,8 @@ public class EnvironmentCommand : Command
         }
     }
 
-    private async Task HandleRemoveUnits(string snapName, bool allSnaps, IFileService fileService, IManifestService manifestService, ILogger logger)
+    private async Task HandleRemoveUnits(string snapName, bool allSnaps, IFileService fileService,
+        IManifestService manifestService, ISystemDService systemDService, ILogger logger)
     {
         try
         {
@@ -132,7 +137,7 @@ public class EnvironmentCommand : Command
 
             foreach (var component in components)
             {
-                await component.RemoveMountUnits(fileService, manifestService, logger);
+                await component.RemoveMountUnits(fileService, manifestService, systemDService, logger);
                 logger.LogDebug($"Removed units from snap {component.Key}");
             }
         }

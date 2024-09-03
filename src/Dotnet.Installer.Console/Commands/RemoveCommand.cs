@@ -11,18 +11,21 @@ public class RemoveCommand : Command
     private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
     private readonly ISnapService _snapService;
+    private readonly ISystemDService _systemDService;
     private readonly ILogger _logger;
 
     public RemoveCommand(
         IFileService fileService,
         IManifestService manifestService,
         ISnapService snapService,
+        ISystemDService systemDService,
         ILogger logger)
         : base("remove", "Removes an installed .NET component from the system")
     {
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
         _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
+        _systemDService = systemDService ?? throw new ArgumentNullException(nameof(systemDService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         var componentArgument = new Argument<string>(
@@ -94,7 +97,7 @@ public class RemoveCommand : Command
                 }
             }
 
-            await requestedComponent.Uninstall(_fileService, _manifestService, _snapService, _logger);
+            await requestedComponent.Uninstall(_fileService, _manifestService, _snapService, _systemDService, _logger);
         }
         catch (ApplicationException ex)
         {
