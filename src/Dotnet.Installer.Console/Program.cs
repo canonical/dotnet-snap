@@ -29,14 +29,15 @@ class Program
         var fileService = new FileService();
         var manifestService = new ManifestService();
         var snapService = new SnapService();
+        var systemDService = new SystemDService();
         var logger = new Logger();
 
         var rootCommand = new RootCommand(".NET Installer command-line tool")
         {
-            new EnvironmentCommand(fileService, manifestService, logger),
-            new ListCommand(manifestService),
-            new InstallCommand(fileService, manifestService, snapService, logger),
-            new RemoveCommand(fileService, manifestService, snapService, logger)
+            new EnvironmentCommand(fileService, manifestService, systemDService, logger),
+            new ListCommand(fileService, manifestService),
+            new InstallCommand(fileService, manifestService, snapService, systemDService, logger),
+            new RemoveCommand(fileService, manifestService, snapService, systemDService, logger)
         };
 
         var verboseOption = new Option<bool>("--verbose", "Enables debug output level verbosity.");
