@@ -18,72 +18,86 @@ public class Component
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
 
-    [JsonIgnore]
-    private string MountsFileName => $"{Key}.mounts";
-
     public event EventHandler<InstallationStartedEventArgs>? InstallationStarted;
     public event EventHandler<InstallationFinishedEventArgs>? InstallationFinished;
 
     public async Task Install(IFileService fileService, IManifestService manifestService, ISnapService snapService,
-        ILogger? logger = default)
+        ISystemDService systemDService, bool isRootComponent, ILogger? logger = default)
     {
         if (Installation is null)
         {
             InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
 
-            if (!CanInstall(manifestService, out var componentKeyToRemove))
+            if (isRootComponent)
             {
-                logger?.LogInformation($"A component that contains {Description} is already installed.");
-                return;
+                if (!CanInstall(manifestService, out var componentKeyToRemove))
+                {
+                    logger?.LogInformation($"The {Description} is already installed.");
+                    return;
+                }
+
+                if (componentKeyToRemove is not null)
+                {
+                    logger?.LogDebug($"Removing component {componentKeyToRemove} before installing {Key}.");
+                    var componentToRemove = manifestService.Local.First(x => x.Key == componentKeyToRemove);
+                    await componentToRemove.Uninstall(fileService, manifestService, snapService, systemDService,
+                        logger);
+                }
+
+                // Install content snap on the machine
+                if (!snapService.IsSnapInstalled(Key))
+                {
+                    var result = await snapService.Install(Key);
+                    if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
+                }
+
+                // Place linking file in the content snap's $SNAP_COMMON
+                await fileService.PlaceLinkageFile(Key);
+
+                // Install Systemd mount units
+                await PlaceMountUnits(fileService, manifestService, systemDService, logger);
+
+                // Install update watcher unit
+                await PlacePathUnits(fileService, systemDService, logger);
             }
-
-            if (componentKeyToRemove is not null)
-            {
-                logger?.LogDebug($"Removing component {componentKeyToRemove} before installing {Key}.");
-                var componentToRemove = manifestService.Local.First(x => x.Key == componentKeyToRemove);
-                await componentToRemove.Uninstall(fileService, manifestService, snapService, logger);
-            }
-
-            // Install content snap on the machine
-            if (!snapService.IsSnapInstalled(Key))
-            {
-                var result = await snapService.Install(Key);
-                if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
-            }
-
-            // Place linking file in the content snap's $SNAP_COMMON
-            await File.WriteAllTextAsync(
-                Path.Join("/", "var", "snap", Key, "common", "dotnet-installer"),
-                "installer linkage ok\n",
-                Encoding.UTF8);
-
-            // Install Systemd mount units
-            await PlaceMountUnits(fileService, manifestService, logger);
-
-            // Install update watcher unit
-            await PlacePathUnits(fileService, logger);
 
             // Register the installation of this component in the local manifest file
-            await manifestService.Add(this);
+            await manifestService.Add(this, isRootComponent);
+
+            foreach (var dependency in Dependencies)
+            {
+                var component = manifestService.Remote.First(c => c.Key == dependency);
+                await component.Install(fileService, manifestService, snapService, systemDService,
+                    isRootComponent: false, logger);
+            }
 
             InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
         }
         else
         {
-            logger?.LogInformation($"{Key} already installed!");
+            logger?.LogInformation($"{Description} already installed!");
         }
     }
 
     public async Task Uninstall(IFileService fileService, IManifestService manifestService, ISnapService snapService,
-        ILogger? logger = default)
+        ISystemDService systemDService, ILogger? logger = default)
     {
         if (Installation is not null)
         {
+            if (!Installation.IsRootComponent)
+            {
+                var rootComponent = manifestService.Local.First(c => c.MajorVersion == MajorVersion
+                    && c.Installation is not null && c.Installation.IsRootComponent);
+                throw new ApplicationException(
+                    $"The {Description} has been installed through the {rootComponent.Description}, " +
+                    $"please uninstall the {rootComponent.Name} component instead.");
+            }
+
             // Uninstall systemd mount units
-            await RemoveMountUnits(fileService, manifestService, logger);
+            await RemoveMountUnits(fileService, manifestService, systemDService, logger);
 
             // Uninstall systemd path units
-            await RemovePathUnits(fileService, logger);
+            await RemovePathUnits(fileService, systemDService, logger);
 
             if (snapService.IsSnapInstalled(Key))
             {
@@ -95,11 +109,11 @@ public class Component
         }
     }
 
-    public async Task PlaceMountUnits(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
+    public async Task PlaceMountUnits(IFileService fileService, IManifestService manifestService,
+        ISystemDService systemDService, ILogger? logger = default)
     {
         var units = new StringBuilder();
-        var unitPaths =
-            Directory.EnumerateFiles(Path.Join("/", "snap", Key, "current", "mounts"));
+        var unitPaths = fileService.EnumerateContentSnapMountFiles(Key);
 
         foreach (var unitPath in unitPaths)
         {
@@ -109,26 +123,23 @@ public class Component
         }
 
         // Save unit names to component .mounts file
-        await File.WriteAllTextAsync(
-            Path.Join(manifestService.SnapConfigurationLocation, MountsFileName),
-            units.ToString(),
-            Encoding.UTF8);
+        await fileService.PlaceUnitsFile(manifestService.SnapConfigurationLocation, contentSnapName: Key,
+            units.ToString());
 
-        var result = await Terminal.Invoke("systemctl", "daemon-reload");
-        if (result != 0)
+        var result = await systemDService.DaemonReload();
+        if (!result.IsSuccess)
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
-        await Mount(fileService, manifestService, logger);
+        await Mount(manifestService, fileService, systemDService, logger);
     }
 
     public async Task RemoveMountUnits(IFileService fileService, IManifestService manifestService,
-        ILogger? logger = default)
+        ISystemDService systemDService, ILogger? logger = default)
     {
-        await Unmount(fileService, manifestService, logger);
+        await Unmount(fileService, manifestService, systemDService, logger);
 
-        var units = await File.ReadAllLinesAsync(
-            Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
+        var units = await fileService.ReadUnitsFile(manifestService.SnapConfigurationLocation, Key);
 
         foreach (var unit in units)
         {
@@ -136,31 +147,31 @@ public class Component
             fileService.UninstallSystemdMountUnit(unit);
         }
 
-        File.Delete(Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
+        fileService.DeleteUnitsFile(manifestService.SnapConfigurationLocation, Key);
 
-        var result = await Terminal.Invoke("systemctl", "daemon-reload");
-        if (result != 0)
+        var result = await systemDService.DaemonReload();
+        if (!result.IsSuccess)
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
     }
 
-    public async Task Mount(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
+    public async Task Mount(IManifestService manifestService, IFileService fileService, ISystemDService systemDService,
+        ILogger? logger = default)
     {
-        var units = await File.ReadAllLinesAsync(
-            Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
+        var units = await fileService.ReadUnitsFile(manifestService.SnapConfigurationLocation, Key);
 
         foreach (var unit in units)
         {
-            var result = await Terminal.Invoke("systemctl", "enable", unit);
-            if (result != 0)
+            var result = await systemDService.EnableUnit(unit);
+            if (!result.IsSuccess)
             {
                 throw new ApplicationException($"Could not enable unit {unit}");
             }
             logger?.LogDebug($"Enabled {unit}");
 
-            result = await Terminal.Invoke("systemctl", "start", unit);
-            if (result != 0)
+            result = await systemDService.StartUnit(unit);
+            if (!result.IsSuccess)
             {
                 throw new ApplicationException($"Could not start unit {unit}");
             }
@@ -170,22 +181,22 @@ public class Component
         }
     }
 
-    public async Task Unmount(IFileService fileService, IManifestService manifestService, ILogger? logger = default)
+    public async Task Unmount(IFileService fileService, IManifestService manifestService,
+        ISystemDService systemDService, ILogger? logger = default)
     {
-        var units = await File.ReadAllLinesAsync(
-            Path.Join(manifestService.SnapConfigurationLocation, MountsFileName));
+        var units = await fileService.ReadUnitsFile(manifestService.SnapConfigurationLocation, Key);
 
         foreach (var unit in units)
         {
-            var result = await Terminal.Invoke("systemctl", "disable", unit);
-            if (result != 0)
+            var result = await systemDService.DisableUnit(unit);
+            if (!result.IsSuccess)
             {
                 throw new ApplicationException($"Could not disable unit {unit}");
             }
             logger?.LogDebug($"Disabled {unit}");
 
-            result = await Terminal.Invoke("systemctl", "stop", unit);
-            if (result != 0)
+            result = await systemDService.StopUnit(unit);
+            if (!result.IsSuccess)
             {
                 throw new ApplicationException($"Could not stop unit {unit}");
             }
@@ -199,43 +210,74 @@ public class Component
         logger?.LogDebug("Removed empty directories.");
     }
 
-    private async Task PlacePathUnits(IFileService fileService, ILogger? logger = default)
+    public DotnetVersion GetDotnetVersion(IManifestService manifestService, IFileService fileService)
+    {
+        if (Installation is null) throw new ApplicationException($"The component {Key} is not installed.");
+        var dotnetRoot = "/snap/@@SNAP@@/current/usr/lib/dotnet";
+
+        if (Installation.IsRootComponent)
+        {
+            dotnetRoot = dotnetRoot.Replace("@@SNAP@@", Key);
+        }
+        else
+        {
+            var rootComponent = manifestService.Local.First(c => c.MajorVersion == MajorVersion
+                                                                 && c.Installation is not null
+                                                                 && c.Installation.IsRootComponent);
+            dotnetRoot = dotnetRoot.Replace("@@SNAP@@", rootComponent.Key);
+        }
+
+        return Name switch
+        {
+            Constants.DotnetRuntimeComponentName => fileService.ReadDotVersionFile(
+                dotnetRoot, "shared/Microsoft.NETCore.App", MajorVersion),
+            Constants.AspnetCoreRuntimeComponentName => fileService.ReadDotVersionFile(
+                dotnetRoot, "shared/Microsoft.AspNetCore.App", MajorVersion),
+            Constants.SdkComponentName => fileService.ReadDotVersionFile(
+                dotnetRoot, "sdk", MajorVersion),
+            _ => throw new ApplicationException("Could not read .NET version from .version file.")
+        };
+    }
+
+    private async Task PlacePathUnits(IFileService fileService, ISystemDService systemDService,
+        ILogger? logger = default)
     {
         fileService.InstallSystemdPathUnit(Key);
         logger?.LogDebug($"Placed upgrade watcher path and service units for snap {Key}");
 
-        var result = await Terminal.Invoke("systemctl", "daemon-reload");
-        if (result != 0)
+        var result = await systemDService.DaemonReload();
+        if (!result.IsSuccess)
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
 
-        result = await Terminal.Invoke("systemctl", "enable", $"{Key}-update-watcher.path");
-        if (result != 0)
+        result = await systemDService.EnableUnit($"{Key}-update-watcher.path");
+        if (!result.IsSuccess)
         {
             throw new ApplicationException($"Could not enable {Key}-update-watcher.path");
         }
         logger?.LogDebug($"Enabled {Key}-update-watcher.path");
 
-        result = await Terminal.Invoke("systemctl", "start", $"{Key}-update-watcher.path");
-        if (result != 0)
+        result = await systemDService.StartUnit($"{Key}-update-watcher.path");
+        if (!result.IsSuccess)
         {
             throw new ApplicationException($"Could not start {Key}-update-watcher.path");
         }
         logger?.LogDebug($"Started {Key}-update-watcher.path");
     }
 
-    private async Task RemovePathUnits(IFileService fileService, ILogger? logger = default)
+    private async Task RemovePathUnits(IFileService fileService, ISystemDService systemDService,
+        ILogger? logger = default)
     {
-        var result = await Terminal.Invoke("systemctl", "disable", $"{Key}-update-watcher.path");
-        if (result != 0)
+        var result = await systemDService.DisableUnit($"{Key}-update-watcher.path");
+        if (!result.IsSuccess)
         {
             throw new ApplicationException($"Could not disable {Key}-update-watcher.path");
         }
         logger?.LogDebug($"Disabled {Key}-update-watcher.path");
 
-        result = await Terminal.Invoke("systemctl", "stop", $"{Key}-update-watcher.path");
-        if (result != 0)
+        result = await systemDService.StopUnit($"{Key}-update-watcher.path");
+        if (!result.IsSuccess)
         {
             throw new ApplicationException($"Could not stop {Key}-update-watcher.path");
         }
@@ -244,8 +286,8 @@ public class Component
         fileService.UninstallSystemdPathUnit(Key);
         logger?.LogDebug($"Removed upgrade watcher path and service units for snap {Key}");
 
-        result = await Terminal.Invoke("systemctl", "daemon-reload");
-        if (result != 0)
+        result = await systemDService.DaemonReload();
+        if (!result.IsSuccess)
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
@@ -259,7 +301,6 @@ public class Component
     /// </summary>
     /// <param name="manifestService">The manifest service.</param>
     /// <param name="componentKeyToRemove">The key of the component to remove.</param>
-    /// <param name="logger">A logger object.</param>
     /// <returns>Whether the current component can be installed.</returns>
     private bool CanInstall(IManifestService manifestService, out string? componentKeyToRemove)
     {
