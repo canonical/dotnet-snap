@@ -1,6 +1,7 @@
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
+using Dotnet.Installer.Core.Types;
 using Moq;
 
 namespace Dotnet.Installer.Core.Tests.Models;
@@ -25,12 +26,25 @@ public class ComponentTests
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemDService>();
+
+        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+            .ReturnsAsync(new InvocationResult(
+                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
 
         // Act
         var evt = await Assert.RaisesAsync<InstallationStartedEventArgs>(
             h => component.InstallationStarted += h,
             h => component.InstallationStarted -= h,
-            () => component.Install(fileService.Object, manifestService.Object, snapService.Object));
+            () => component.Install(fileService.Object, manifestService.Object, snapService.Object,
+                systemDService.Object, isRootComponent: true));
 
         // Assert
         Assert.NotNull(evt);
@@ -56,12 +70,25 @@ public class ComponentTests
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemDService>();
+
+        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+            .ReturnsAsync(new InvocationResult(
+                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
 
         // Act
         var evt = await Assert.RaisesAsync<InstallationFinishedEventArgs>(
             h => component.InstallationFinished += h,
             h => component.InstallationFinished -= h,
-            () => component.Install(fileService.Object, manifestService.Object, snapService.Object));
+            () => component.Install(fileService.Object, manifestService.Object, snapService.Object,
+                systemDService.Object, isRootComponent: true));
 
         // Assert
         Assert.NotNull(evt);
@@ -108,17 +135,30 @@ public class ComponentTests
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemDService>();
 
         manifestService.Setup(s => s.Remote).Returns([component1, component2, component3]);
         manifestService.Setup(e => e.Add(
-                It.IsAny<Component>(), CancellationToken.None))
-            .Callback((Component c, CancellationToken cancellationToken) =>
+                It.IsAny<Component>(), It.IsAny<bool>(), CancellationToken.None))
+            .Callback((Component c, bool isRootComponent, CancellationToken cancellationToken) =>
             {
                 installedComponents.Add(c.Key);
             });
 
+        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+            .ReturnsAsync(new InvocationResult(
+                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+
         // Act
-        await component1.Install(fileService.Object, manifestService.Object, snapService.Object);
+        await component1.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object,
+            isRootComponent: true);
 
         // Assert
         Assert.True(installedComponents.Count == 3);
@@ -141,13 +181,15 @@ public class ComponentTests
             EndOfLife = DateTime.Now,
             Installation = new Installation
             {
-                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3))
+                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3)),
+                IsRootComponent = true
             }
         };
 
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemDService>();
 
         fileService.Setup(f => f.FileExists(It.IsAny<string>())).Returns(true);
         manifestService.Setup(m => m.DotnetInstallLocation).Returns("dotnet_install_path");
@@ -158,10 +200,18 @@ public class ComponentTests
                 installedComponents.Remove(c);
             });
 
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.DisableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StopUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+
         installedComponents.Add(component1);
 
         // Act
-        await component1.Uninstall(fileService.Object, manifestService.Object, snapService.Object);
+        await component1.Uninstall(fileService.Object, manifestService.Object, snapService.Object,
+            systemDService.Object);
 
         // Assert
         Assert.Null(component1.Installation);
