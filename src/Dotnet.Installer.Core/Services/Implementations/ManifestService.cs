@@ -17,9 +17,9 @@ public partial class ManifestService : IManifestService
 
     public string SnapConfigurationLocation => SnapConfigPath;
     public string DotnetInstallLocation =>
-        Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR") 
+        Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR")
             ?? throw new ApplicationException("DOTNET_INSTALL_DIR is not set.");
-    
+
     /// <summary>
     /// The local manifest, which includes currently installed components.
     /// </summary>
@@ -55,11 +55,12 @@ public partial class ManifestService : IManifestService
         _merged = Merge(_remote, _local);
     }
 
-    public async Task Add(Component component, CancellationToken cancellationToken = default)
+    public async Task Add(Component component, bool isRootComponent, CancellationToken cancellationToken = default)
     {
         component.Installation = new Installation
         {
-            InstalledAt = DateTimeOffset.UtcNow
+            InstalledAt = DateTimeOffset.UtcNow,
+            IsRootComponent = isRootComponent
         };
         _local.Add(component);
         await Save(cancellationToken);
@@ -74,7 +75,7 @@ public partial class ManifestService : IManifestService
         }
         await Save(cancellationToken);
     }
-    
+
     public Component? MatchVersion(string component, string version)
     {
         if (string.IsNullOrWhiteSpace(version)) return default;
@@ -85,13 +86,13 @@ public partial class ManifestService : IManifestService
             1 => _remote.Where(c => c.MajorVersion == int.Parse(version) &&
                     c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                 .MaxBy(c => c.MajorVersion),
-                        
+
             // Major and minor version only, e.g. install sdk 8.0
             3 => _remote.Where(c => // "8.0"
                     c.MajorVersion == int.Parse(version[..1]) &&
                     c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                 .MaxBy(c => c.MajorVersion),
-                        
+
             _ => default
         };
     }
