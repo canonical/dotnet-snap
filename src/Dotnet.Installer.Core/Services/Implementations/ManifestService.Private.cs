@@ -46,6 +46,13 @@ public partial class ManifestService
         return components;
     }
 
+    private async Task Refresh(CancellationToken cancellationToken = default)
+    {
+        _local = await LoadLocal(cancellationToken);
+        _remote = await LoadRemote(_includeArchive, cancellationToken);
+        _merged = Merge(_remote, _local);
+    }
+
     private static List<Component> Merge(List<Component> remoteComponents, List<Component> localComponents)
     {
         var result = new List<Component>();

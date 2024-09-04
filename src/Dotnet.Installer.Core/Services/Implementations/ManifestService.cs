@@ -14,6 +14,7 @@ public partial class ManifestService : IManifestService
     private List<Component> _local = [];
     private List<Component> _remote = [];
     private List<Component> _merged = [];
+    private bool _includeArchive = false;
 
     public string SnapConfigurationLocation => SnapConfigPath;
     public string DotnetInstallLocation =>
@@ -48,11 +49,10 @@ public partial class ManifestService : IManifestService
         private set => _merged = value.ToList();
     }
 
-    public async Task Initialize(bool includeArchive = false, CancellationToken cancellationToken = default)
+    public Task Initialize(bool includeArchive = false, CancellationToken cancellationToken = default)
     {
-        _local = await LoadLocal(cancellationToken);
-        _remote = await LoadRemote(includeArchive, cancellationToken);
-        _merged = Merge(_remote, _local);
+        _includeArchive = includeArchive;
+        return Refresh(cancellationToken);
     }
 
     public async Task Add(Component component, bool isRootComponent, CancellationToken cancellationToken = default)
@@ -64,6 +64,7 @@ public partial class ManifestService : IManifestService
         };
         _local.Add(component);
         await Save(cancellationToken);
+        await Refresh(cancellationToken);
     }
 
     public async Task Remove(Component component, CancellationToken cancellationToken = default)
@@ -74,6 +75,7 @@ public partial class ManifestService : IManifestService
             _local.Remove(componentToRemove);
         }
         await Save(cancellationToken);
+        await Refresh(cancellationToken);
     }
 
     public Component? MatchVersion(string component, string version)

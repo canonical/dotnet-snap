@@ -84,28 +84,40 @@ public class Component
     {
         if (Installation is not null)
         {
-            if (!Installation.IsRootComponent)
+            if (Installation.IsRootComponent)
             {
-                var rootComponent = manifestService.Local.First(c => c.MajorVersion == MajorVersion
-                    && c.Installation is not null && c.Installation.IsRootComponent);
-                throw new ApplicationException(
-                    $"The {Description} has been installed through the {rootComponent.Description}, " +
-                    $"please uninstall the {rootComponent.Name} component instead.");
+                // Uninstall systemd mount units
+                await RemoveMountUnits(fileService, manifestService, systemDService, logger);
+
+                // Uninstall systemd path units
+                await RemovePathUnits(fileService, systemDService, logger);
+
+                if (snapService.IsSnapInstalled(Key))
+                {
+                    await snapService.Remove(Key, purge: true);
+                }
             }
-
-            // Uninstall systemd mount units
-            await RemoveMountUnits(fileService, manifestService, systemDService, logger);
-
-            // Uninstall systemd path units
-            await RemovePathUnits(fileService, systemDService, logger);
-
-            if (snapService.IsSnapInstalled(Key))
+            else
             {
-                await snapService.Remove(Key, purge: true);
+                var rootComponent = manifestService.Local.FirstOrDefault(c => c.MajorVersion == MajorVersion
+                                                                              && c.Installation is not null && c.Installation.IsRootComponent);
+
+                if (rootComponent is not null)
+                {
+                    throw new ApplicationException(
+                        $"The {Description} has been installed through the {rootComponent.Description}, " +
+                        $"please uninstall the {rootComponent.Name} component instead.");
+                }
             }
 
             Installation = null;
             await manifestService.Remove(this);
+
+            foreach (var dependency in Dependencies)
+            {
+                var component = manifestService.Local.First(c => c.Key == dependency);
+                await component.Uninstall(fileService, manifestService, snapService, systemDService, logger);
+            }
         }
     }
 
