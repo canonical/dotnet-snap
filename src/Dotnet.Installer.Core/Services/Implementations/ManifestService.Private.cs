@@ -1,7 +1,5 @@
-﻿using System.Net.Http.Json;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
-using CliWrap;
 using Dotnet.Installer.Core.Models;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
@@ -12,17 +10,6 @@ public partial class ManifestService
         Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR"), "..", "snap");
 
     private static readonly string LocalManifestPath = Path.Join(SnapConfigPath, "manifest.json");
-    
-    private static readonly string[] SupportedVersions = ["6.0", "7.0", "8.0"];
-    
-    private static readonly HttpClient HttpClient = new()
-    {
-        #if !DEBUG
-        BaseAddress = new Uri(Environment.GetEnvironmentVariable("SERVER_URL")
-                              ?? throw new ApplicationException(
-                                  "SERVER_URL environment variable is not defined."))
-        #endif
-    };
 
     private static async Task<List<Component>> LoadLocal(CancellationToken cancellationToken = default)
     {
@@ -36,61 +23,34 @@ public partial class ManifestService
         return result ?? [];
     }
 
-    private static async Task<List<Component>> LoadRemote(bool includeArchive = false, CancellationToken cancellationToken = default)
+    private static async Task<List<Component>> LoadRemote(bool includeUnsupported = false,
+        CancellationToken cancellationToken = default)
     {
-        var content = new List<Component>();
-
-        #if DEBUG
-        await Cli.Wrap("git")
-            .WithArguments(["rev-parse", "--show-toplevel"])
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(path =>
-            {
-                var manifestLocation = Path.Join(path, "manifest", "latest.json");
-                if (!File.Exists(manifestLocation)) return;
-                var latest = JsonSerializer.Deserialize<List<Component>>(
-                    File.ReadAllText(manifestLocation), JsonSerializerOptions);
-                content.AddRange(latest ?? []);
-
-                if (includeArchive)
-                {
-                    foreach (var version in SupportedVersions)
-                    {
-                        var versionArchiveLocation = Path.Join(path, "manifest", version, "archive.json");
-                        if (!File.Exists(versionArchiveLocation)) return;
-                        var versionArchive = JsonSerializer.Deserialize<List<Component>>(
-                            File.ReadAllText(versionArchiveLocation), JsonSerializerOptions);
-                        content.AddRange(versionArchive ?? []);
-                    }
-                }
-            }))
-            .ExecuteAsync(cancellationToken);
-        #else
-        var response = await HttpClient.GetAsync("latest.json", cancellationToken);
-
-        if (response.IsSuccessStatusCode)
+        var supportedJsonFilePath = Path.Join("/", "snap", "dotnet-manifest", "current", "supported.json");
+        if (!File.Exists(supportedJsonFilePath))
         {
-            var latest = await response.Content.ReadFromJsonAsync<List<Component>>(
-                cancellationToken: cancellationToken);
-            if (latest is not null) content.AddRange(latest);
+            throw new ApplicationException("dotnet-manifest snap is not installed. Please run 'sudo snap install dotnet-manifest'.");
         }
 
-        if (includeArchive)
+        var contentStream = File.OpenRead(supportedJsonFilePath);
+        var components = await JsonSerializer.DeserializeAsync<List<Component>>(
+            contentStream, JsonSerializerOptions, cancellationToken);
+
+        if (components is null)
         {
-            foreach (var version in SupportedVersions)
-            {
-                response = await HttpClient.GetAsync($"{version}/archive.json", cancellationToken);
-
-                if (!response.IsSuccessStatusCode) continue;
-                
-                var archive =
-                    await response.Content.ReadFromJsonAsync<List<Component>>(cancellationToken: cancellationToken);
-                    
-                if (archive is not null) content.AddRange(archive);
-            }
+            throw new ApplicationException("Could not read the supported.json file.");
         }
-        #endif
 
-        return content;
+        // TODO Add unsupported flag support
+
+        return components;
+    }
+
+    private async Task Refresh(CancellationToken cancellationToken = default)
+    {
+        _local = await LoadLocal(cancellationToken);
+        _remote = await LoadRemote(_includeArchive, cancellationToken);
+        _merged = Merge(_remote, _local);
     }
 
     private static List<Component> Merge(List<Component> remoteComponents, List<Component> localComponents)
@@ -113,7 +73,7 @@ public partial class ManifestService
 
         return result;
     }
-    
+
     private async Task Save(CancellationToken cancellationToken = default)
     {
         await using var sw = new StreamWriter(LocalManifestPath, append: false, Encoding.UTF8);

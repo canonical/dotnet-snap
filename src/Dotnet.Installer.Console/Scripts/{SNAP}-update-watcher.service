@@ -1,0 +1,7 @@
+[Unit]
+Description=service triggered by {SNAP}-update-watcher.path
+
+[Service]
+ExecStart=/snap/dotnet/current/Scripts/update-mounts.sh {SNAP}
+StandardOutput=journal
+StandardError=journal

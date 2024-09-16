@@ -1,6 +1,5 @@
 ﻿using System.CommandLine;
 using System.Text;
-using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 using Spectre.Console;
@@ -11,12 +10,23 @@ public class RemoveCommand : Command
 {
     private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
+    private readonly ISnapService _snapService;
+    private readonly ISystemDService _systemDService;
+    private readonly ILogger _logger;
 
-    public RemoveCommand(IFileService fileService, IManifestService manifestService) 
+    public RemoveCommand(
+        IFileService fileService,
+        IManifestService manifestService,
+        ISnapService snapService,
+        ISystemDService systemDService,
+        ILogger logger)
         : base("remove", "Removes an installed .NET component from the system")
     {
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
+        _systemDService = systemDService ?? throw new ArgumentNullException(nameof(systemDService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         var componentArgument = new Argument<string>(
             name: "component",
@@ -32,7 +42,7 @@ public class RemoveCommand : Command
         {
             IsRequired = false
         };
-        
+
         AddArgument(componentArgument);
         AddArgument(versionArgument);
         AddOption(yesOption);
@@ -44,60 +54,55 @@ public class RemoveCommand : Command
     {
         try
         {
-            if (Directory.Exists(_manifestService.DotnetInstallLocation))
+            if (!Directory.Exists(_manifestService.DotnetInstallLocation))
             {
-                await _manifestService.Initialize();
-
-                var requestedVersion = DotnetVersion.Parse(version);
-                var requestedComponent = _manifestService.Local.FirstOrDefault(c => 
-                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase)
-                    && c.Version.Equals(requestedVersion, DotnetVersionComparison.IgnoreRevision));
-
-                if (requestedComponent is null)
-                {
-                    System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
-                        component, version);
-                    Environment.Exit(-1);
-                }
-
-                var dependencyTree = new DependencyTree(_manifestService.Local);
-                var reverseDependencies = 
-                    dependencyTree.GetReverseDependencies(requestedComponent.Key);
-
-                if (reverseDependencies.Count != 0 && !yesOption)
-                {
-                    var confirmationPrompt = new StringBuilder();
-                    confirmationPrompt.AppendLine("This will also remove:");
-                    foreach (var reverseDependency in reverseDependencies)
-                    {
-                        confirmationPrompt.AppendLine($"\t* {reverseDependency.Key}");
-                    }
-
-                    confirmationPrompt.AppendLine("Continue?");
-
-                    if (!AnsiConsole.Confirm(confirmationPrompt.ToString(), defaultValue: false))
-                    {
-                        return;
-                    }
-                }
-
-                await requestedComponent.Uninstall(_fileService, _manifestService);
-                foreach (var reverseDependency in reverseDependencies)
-                {
-                    await reverseDependency.Uninstall(_fileService, _manifestService);
-                }
-
-                return;
+                _logger.LogError($"The directory {_manifestService.DotnetInstallLocation} does not exist");
+                Environment.Exit(-1);
             }
 
-            System.Console.Error.WriteLine("ERROR: The directory {0} does not exist",
-                _manifestService.DotnetInstallLocation);
-            Environment.Exit(-1);
+            await _manifestService.Initialize();
+
+            var requestedComponent = version switch
+            {
+                "latest" => _manifestService.Remote
+                    .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                    .MaxBy(c => c.MajorVersion),
+                _ => _manifestService.MatchVersion(component, version)
+            };
+
+            if (requestedComponent is null)
+            {
+                _logger.LogError($"The requested component {component} {version} does not exist.");
+                Environment.Exit(-1);
+            }
+
+            var dependencyTree = new DependencyTree(_manifestService.Local);
+            var reverseDependencies =
+                dependencyTree.GetReverseDependencies(requestedComponent.Key);
+
+            if (reverseDependencies.Count != 0 && !yesOption)
+            {
+                var confirmationPrompt = new StringBuilder();
+                confirmationPrompt.AppendLine("The component you are uninstalling also includes:");
+                foreach (var reverseDependency in reverseDependencies)
+                {
+                    confirmationPrompt.AppendLine($"\t* {reverseDependency.Key}");
+                }
+
+                confirmationPrompt.AppendLine("Continue?");
+
+                if (!AnsiConsole.Confirm(confirmationPrompt.ToString(), defaultValue: false))
+                {
+                    return;
+                }
+            }
+
+            await requestedComponent.Uninstall(_fileService, _manifestService, _snapService, _systemDService, _logger);
         }
-        catch (ExceptionBase ex)
+        catch (ApplicationException ex)
         {
-            System.Console.Error.WriteLine("ERROR: " + ex.Message);
-            Environment.Exit((int)ex.ErrorCode);
+            _logger.LogError(ex.Message);
+            Environment.Exit(-1);
         }
     }
 }

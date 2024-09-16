@@ -1,14 +1,19 @@
-﻿namespace Dotnet.Installer.Core.Services.Contracts;
+﻿using Dotnet.Installer.Core.Types;
+
+namespace Dotnet.Installer.Core.Services.Contracts;
 
 public interface IFileService
 {
-    void DeleteFile(string path);
-    Task<string> DownloadFile(Uri url, string destinationDirectory);
+    IEnumerable<string> EnumerateContentSnapMountFiles(string contentSnapName);
     bool FileExists(string path);
-    Task ExtractDeb(string debPath, string destinationDirectory, string snapConfigurationDirectory);
-    Task<string> GetFileHash(string filePath);
-    IEnumerable<string> MoveDirectory(string sourceDirectory, string destinationDirectory);
-    Stream OpenRead(string path);
-    Task<string[]> ReadAllLines(string fileName);
+    void InstallSystemdMountUnit(string unitPath);
+    void UninstallSystemdMountUnit(string unitName);
+    void InstallSystemdPathUnit(string snapName);
+    void UninstallSystemdPathUnit(string snapName);
+    Task PlaceLinkageFile(string contentSnapName);
+    Task PlaceUnitsFile(string snapConfigDirLocation, string contentSnapName, string units);
+    Task<string[]> ReadUnitsFile(string snapConfigDirLocation, string contentSnapName);
+    void DeleteUnitsFile(string snapConfigDirLocation, string contentSnapName);
+    DotnetVersion ReadDotVersionFile(string dotNetRoot, string componentPath, int majorVersion);
     void RemoveEmptyDirectories(string root);
 }

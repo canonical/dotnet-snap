@@ -14,12 +14,13 @@ public partial class ManifestService : IManifestService
     private List<Component> _local = [];
     private List<Component> _remote = [];
     private List<Component> _merged = [];
+    private bool _includeArchive = false;
 
     public string SnapConfigurationLocation => SnapConfigPath;
     public string DotnetInstallLocation =>
-        Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR") 
+        Environment.GetEnvironmentVariable("DOTNET_INSTALL_DIR")
             ?? throw new ApplicationException("DOTNET_INSTALL_DIR is not set.");
-    
+
     /// <summary>
     /// The local manifest, which includes currently installed components.
     /// </summary>
@@ -48,21 +49,22 @@ public partial class ManifestService : IManifestService
         private set => _merged = value.ToList();
     }
 
-    public async Task Initialize(bool includeArchive = false, CancellationToken cancellationToken = default)
+    public Task Initialize(bool includeArchive = false, CancellationToken cancellationToken = default)
     {
-        _local = await LoadLocal(cancellationToken);
-        _remote = await LoadRemote(includeArchive, cancellationToken);
-        _merged = Merge(_remote, _local);
+        _includeArchive = includeArchive;
+        return Refresh(cancellationToken);
     }
 
-    public async Task Add(Component component, CancellationToken cancellationToken = default)
+    public async Task Add(Component component, bool isRootComponent, CancellationToken cancellationToken = default)
     {
         component.Installation = new Installation
         {
-            InstalledAt = DateTimeOffset.UtcNow
+            InstalledAt = DateTimeOffset.UtcNow,
+            IsRootComponent = isRootComponent
         };
         _local.Add(component);
         await Save(cancellationToken);
+        await Refresh(cancellationToken);
     }
 
     public async Task Remove(Component component, CancellationToken cancellationToken = default)
@@ -73,5 +75,27 @@ public partial class ManifestService : IManifestService
             _local.Remove(componentToRemove);
         }
         await Save(cancellationToken);
+        await Refresh(cancellationToken);
+    }
+
+    public Component? MatchVersion(string component, string version)
+    {
+        if (string.IsNullOrWhiteSpace(version)) return default;
+
+        return version.Length switch
+        {
+            // Major version only, e.g. install sdk 8
+            1 => _remote.Where(c => c.MajorVersion == int.Parse(version) &&
+                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                .MaxBy(c => c.MajorVersion),
+
+            // Major and minor version only, e.g. install sdk 8.0
+            3 => _remote.Where(c => // "8.0"
+                    c.MajorVersion == int.Parse(version[..1]) &&
+                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                .MaxBy(c => c.MajorVersion),
+
+            _ => default
+        };
     }
 }

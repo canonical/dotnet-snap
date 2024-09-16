@@ -1,24 +1,29 @@
 ﻿using System.CommandLine;
-using Dotnet.Installer.Core.Exceptions;
-using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
-using Dotnet.Installer.Core.Types;
-using Spectre.Console;
 
 namespace Dotnet.Installer.Console.Commands;
 
 public class InstallCommand : Command
 {
     private readonly IFileService _fileService;
-    private readonly ILimitsService _limitsService;
     private readonly IManifestService _manifestService;
+    private readonly ISnapService _snapService;
+    private readonly ISystemDService _systemDService;
+    private readonly ILogger _logger;
 
-    public InstallCommand(IFileService fileService, ILimitsService limitsService, IManifestService manifestService)
+    public InstallCommand(
+        IFileService fileService,
+        IManifestService manifestService,
+        ISnapService snapService,
+        ISystemDService systemDService,
+        ILogger logger)
         : base("install", "Installs a new .NET component in the system")
     {
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
-        _limitsService = limitsService ?? throw new ArgumentNullException(nameof(limitsService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
+        _systemDService = systemDService ?? throw new ArgumentNullException(nameof(systemDService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         var componentArgument = new Argument<string>(
             name: "component",
@@ -44,69 +49,33 @@ public class InstallCommand : Command
             {
                 await _manifestService.Initialize(includeArchive: true);
 
-                Component? MatchVersion()
-                {
-                    if (string.IsNullOrWhiteSpace(version)) return default;
-                    else if (version.Length == 1) // Major version only, e.g. install sdk 8
-                    {
-                        return _manifestService.Remote
-                            .Where(c => 
-                                c.Version.Major == int.Parse(version) &&
-                                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                            .MaxBy(c => c.Version);
-                    }
-                    else if (version.Length == 3) // Major and minor version only, e.g install sdk 8.0
-                    {
-                        return _manifestService.Remote
-                            .Where(c =>                                         // "8.0"
-                                c.Version.Major == int.Parse(version[..1]) &&   // "8"
-                                c.Version.Minor == int.Parse(version[2..3]) &&  // "0"
-                                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                            .MaxBy(c => c.Version);
-                    }
-
-                    return _manifestService.Remote.FirstOrDefault(c =>
-                        c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase) &&
-                        c.Version.Equals(DotnetVersion.Parse(version), DotnetVersionComparison.IgnoreRevision));
-                }
-
                 var requestedComponent = version switch
                 {
                     "latest" => _manifestService.Remote
                         .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                        .MaxBy(c => c.Version),
-                    _ => MatchVersion()
+                        .MaxBy(c => c.MajorVersion),
+                    _ => _manifestService.MatchVersion(component, version)
                 };
 
                 if (requestedComponent is null)
                 {
-                    System.Console.Error.WriteLine("ERROR: The requested component {0} {1} does not exist.", 
-                        component, version);
+                    _logger.LogError($"The requested component {component} {version} does not exist.");
                     Environment.Exit(-1);
                 }
 
-                await AnsiConsole
-                    .Status()
-                    .Spinner(Spinner.Known.Dots12)
-                    .StartAsync("Thinking...", async context =>
-                    {
-                        requestedComponent.InstallingPackageChanged += (sender, args) =>
-                            context.Status($"Installing {args.Package.Name} {args.Component.Version}");
-
-                        await requestedComponent.Install(_fileService, _limitsService, _manifestService);
-                    });
+                await requestedComponent.Install(_fileService, _manifestService, _snapService, _systemDService,
+                    isRootComponent: true, _logger);
 
                 return;
             }
 
-            System.Console.Error.WriteLine("ERROR: The directory {0} does not exist", 
-                _manifestService.DotnetInstallLocation);
+            _logger.LogError($"The directory {_manifestService.DotnetInstallLocation} does not exist");
             Environment.Exit(-1);
         }
-        catch (ExceptionBase ex)
+        catch (ApplicationException ex)
         {
-            System.Console.Error.WriteLine("ERROR: " + ex.Message);
-            Environment.Exit((int)ex.ErrorCode);
+            _logger.LogError(ex.Message);
+            Environment.Exit(-1);
         }
     }
 }

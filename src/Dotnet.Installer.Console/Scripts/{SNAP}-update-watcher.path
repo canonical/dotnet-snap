@@ -1,0 +1,8 @@
+[Unit]
+Description=dotnet-installer-update-mounts watcher for {SNAP}
+
+[Path]
+PathExists=/var/snap/{SNAP}/common/dotnet-installer-update-mounts
+
+[Install]
+WantedBy=multi-user.target

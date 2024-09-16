@@ -1,4 +1,3 @@
-using Dotnet.Installer.Core.Exceptions;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
@@ -10,64 +9,6 @@ namespace Dotnet.Installer.Core.Tests.Models;
 public class ComponentTests
 {
     [Fact]
-    public async Task Install_WithHigherRuntimeVersionThanLimit_ShouldThrowApplicationException()
-    {
-        // Arrange
-        var component = new Component
-        {
-            Dependencies = ["key2", "key3"],
-            Description = "description",
-            Key = "key1",
-            Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 3),
-            BaseUrl = new Uri("https://test.com")
-        };
-
-        var fileService = new Mock<IFileService>();
-        var limitsService = new Mock<ILimitsService>();
-        var manifestService = new Mock<IManifestService>();
-        limitsService.Setup(l => l.Runtime).Returns(new DotnetVersion(8, 0, 2));
-        limitsService.Setup(l => l.Sdk).Returns([
-            new DotnetVersion(8, 0, 102),
-            new DotnetVersion(8, 0, 201)
-        ]);
-
-        // Assert
-        await Assert.ThrowsAsync<VersionTooHighException>(() => 
-            component.Install(fileService.Object, limitsService.Object, manifestService.Object));
-    }
-    
-    [Fact]
-    public async Task Install_WithHigherSdkVersionThanLimit_ShouldThrowApplicationException()
-    {
-        // Arrange
-        var component = new Component
-        {
-            Dependencies = ["key2", "key3"],
-            Description = "description",
-            Key = "key1",
-            Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com")
-        };
-
-        var fileService = new Mock<IFileService>();
-        var limitsService = new Mock<ILimitsService>();
-        var manifestService = new Mock<IManifestService>();
-        limitsService.Setup(l => l.Runtime).Returns(new DotnetVersion(8, 0, 2));
-        limitsService.Setup(l => l.Sdk).Returns([
-            new DotnetVersion(8, 0, 102),
-            new DotnetVersion(8, 0, 201)
-        ]);
-
-        // Assert
-        await Assert.ThrowsAsync<VersionTooHighException>(() => 
-            component.Install(fileService.Object, limitsService.Object, manifestService.Object));
-    }
-
-    [Fact]
     public async Task Install_WithValidVersions_ShouldInvokeInstallationStartedEvent()
     {
         // Arrange
@@ -77,67 +18,40 @@ public class ComponentTests
             Description = "description",
             Key = "key1",
             Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com")
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
 
         var fileService = new Mock<IFileService>();
-        var limitsService = new Mock<ILimitsService>();
         var manifestService = new Mock<IManifestService>();
-        limitsService.Setup(l => l.Sdk).Returns([
-            new DotnetVersion(8, 0, 103),
-            new DotnetVersion(8, 0, 201)
-        ]);
+        var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemDService>();
+
+        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+            .ReturnsAsync(new InvocationResult(
+                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
 
         // Act
         var evt = await Assert.RaisesAsync<InstallationStartedEventArgs>(
             h => component.InstallationStarted += h,
             h => component.InstallationStarted -= h,
-            () => component.Install(fileService.Object, limitsService.Object, manifestService.Object));
+            () => component.Install(fileService.Object, manifestService.Object, snapService.Object,
+                systemDService.Object, isRootComponent: true));
 
         // Assert
         Assert.NotNull(evt);
         Assert.Equal(component, evt.Sender);
         Assert.Equivalent(new InstallationStartedEventArgs(component.Key), evt.Arguments);
     }
-    
-    [Fact]
-    public async Task Install_WithValidVersions_ShouldInvokeInstallingPackageChangedEvent()
-    {
-        // Arrange
-        var component = new Component
-        {
-            Dependencies = [],
-            Description = "description",
-            Key = "key1",
-            Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com")
-        };
 
-        var fileService = new Mock<IFileService>();
-        var limitsService = new Mock<ILimitsService>();
-        var manifestService = new Mock<IManifestService>();
-        limitsService.Setup(l => l.Sdk).Returns([
-            new DotnetVersion(8, 0, 103),
-            new DotnetVersion(8, 0, 201)
-        ]);
-
-        // Act
-        var evt = await Assert.RaisesAsync<InstallingPackageChangedEventArgs>(
-            h => component.InstallingPackageChanged += h,
-            h => component.InstallingPackageChanged -= h,
-            () => component.Install(fileService.Object, limitsService.Object, manifestService.Object));
-
-        // Assert
-        Assert.NotNull(evt);
-        Assert.Equal(component, evt.Sender);
-        Assert.Equivalent(new InstallingPackageChangedEventArgs(
-            new Package { Name = "package1", Version = "1.0" }, component), evt.Arguments);
-    }
-    
     [Fact]
     public async Task Install_WithValidVersions_ShouldInvokeInstallationFinishedEvent()
     {
@@ -148,24 +62,33 @@ public class ComponentTests
             Description = "description",
             Key = "key1",
             Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com")
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
 
         var fileService = new Mock<IFileService>();
-        var limitsService = new Mock<ILimitsService>();
         var manifestService = new Mock<IManifestService>();
-        limitsService.Setup(l => l.Sdk).Returns([
-            new DotnetVersion(8, 0, 103),
-            new DotnetVersion(8, 0, 201)
-        ]);
+        var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemDService>();
+
+        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+            .ReturnsAsync(new InvocationResult(
+                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
 
         // Act
         var evt = await Assert.RaisesAsync<InstallationFinishedEventArgs>(
             h => component.InstallationFinished += h,
             h => component.InstallationFinished -= h,
-            () => component.Install(fileService.Object, limitsService.Object, manifestService.Object));
+            () => component.Install(fileService.Object, manifestService.Object, snapService.Object,
+                systemDService.Object, isRootComponent: true));
 
         // Assert
         Assert.NotNull(evt);
@@ -184,9 +107,9 @@ public class ComponentTests
             Description = "description",
             Key = "key1",
             Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com")
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
         var component2 = new Component
         {
@@ -194,9 +117,9 @@ public class ComponentTests
             Description = "description",
             Key = "key2",
             Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com")
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
         var component3 = new Component
         {
@@ -204,29 +127,38 @@ public class ComponentTests
             Description = "description",
             Key = "key3",
             Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com")
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now
         };
-        
-        var fileService = new Mock<IFileService>();
-        var limitsService = new Mock<ILimitsService>();
-        var manifestService = new Mock<IManifestService>();
 
-        limitsService.Setup(l => l.Sdk).Returns([
-            new DotnetVersion(8, 0, 103),
-            new DotnetVersion(8, 0, 201)
-        ]);
+        var fileService = new Mock<IFileService>();
+        var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemDService>();
+
         manifestService.Setup(s => s.Remote).Returns([component1, component2, component3]);
         manifestService.Setup(e => e.Add(
-                It.IsAny<Component>(), CancellationToken.None))
-            .Callback((Component c, CancellationToken cancellationToken) =>
+                It.IsAny<Component>(), It.IsAny<bool>(), CancellationToken.None))
+            .Callback((Component c, bool isRootComponent, CancellationToken cancellationToken) =>
             {
                 installedComponents.Add(c.Key);
             });
-        
+
+        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+            .ReturnsAsync(new InvocationResult(
+                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+
         // Act
-        await component1.Install(fileService.Object, limitsService.Object, manifestService.Object);
+        await component1.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object,
+            isRootComponent: true);
 
         // Assert
         Assert.True(installedComponents.Count == 3);
@@ -244,17 +176,20 @@ public class ComponentTests
             Description = "description",
             Key = "key1",
             Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com"),
+            MajorVersion = 8,
+            IsLts = false,
+            EndOfLife = DateTime.Now,
             Installation = new Installation
             {
-                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3))
+                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3)),
+                IsRootComponent = true
             }
         };
-        
+
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemDService>();
 
         fileService.Setup(f => f.FileExists(It.IsAny<string>())).Returns(true);
         manifestService.Setup(m => m.DotnetInstallLocation).Returns("dotnet_install_path");
@@ -264,45 +199,22 @@ public class ComponentTests
             {
                 installedComponents.Remove(c);
             });
-        
+
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.DisableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StopUnit(It.IsAny<string>()))
+            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+
         installedComponents.Add(component1);
-        
+
         // Act
-        await component1.Uninstall(fileService.Object, manifestService.Object);
+        await component1.Uninstall(fileService.Object, manifestService.Object, snapService.Object,
+            systemDService.Object);
 
         // Assert
         Assert.Null(component1.Installation);
         Assert.Empty(installedComponents);
-    }
-    
-    [Fact]
-    public async Task Uninstall_WhenRegistrationFileDoesNotExist_ShouldThrowApplicationException()
-    {
-        // Arrange
-        var component1 = new Component
-        {
-            Dependencies = [],
-            Description = "description",
-            Key = "key1",
-            Name = "name",
-            Packages = [new Package { Name = "package1", Version = "1.0" }],
-            Version = new DotnetVersion(8, 0, 103),
-            BaseUrl = new Uri("https://test.com"),
-            Installation = new Installation
-            {
-                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3))
-            }
-        };
-        
-        var fileService = new Mock<IFileService>();
-        var manifestService = new Mock<IManifestService>();
-
-        fileService.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
-        manifestService.Setup(m => m.DotnetInstallLocation).Returns("dotnet_install_path");
-        manifestService.Setup(m => m.SnapConfigurationLocation).Returns("snap_config_location");
-
-        // Assert
-        await Assert.ThrowsAsync<ApplicationException>(() =>
-            component1.Uninstall(fileService.Object, manifestService.Object));
     }
 }
