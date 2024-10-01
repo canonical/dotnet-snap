@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  build:
+  unit-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,6 +34,13 @@ jobs:
           files: |
             TestResults/*.trx
 
+  snapcraft-build:
+    runs-on: ubuntu-latest
+    needs: unit-test
+
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Run Snapcraft
         id: snapcraft
         uses: snapcore/action-build@v1
@@ -44,6 +51,33 @@ jobs:
         with:
           name: snap
           path: ${{ steps.snapcraft.outputs.snap }}
+
+  snapcraft-publish:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    needs: snapcraft-build
+
+    steps:
+      - uses: actions/download-artifact@v4
+        id: download-artifact
+        with:
+          name: snap
+
+      - name: Gather filename
+        id: gather-filename
+        env:
+          ARTIFACT_PATH: ${{ steps.download-artifact.outputs.download-path }}
+        run: |
+          ls -la $ARTIFACT_PATH
+          SNAP_FILE_NAME=$(ls ${ARTIFACT_PATH}/${SNAP_NAME}*.snap)
+          echo "SNAP_PATH=${SNAP_FILE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_LOGIN }}
+        with:
+          snap: ${{ steps.gather-filename.outputs.SNAP_PATH }}
+          release: edge
 
   publish-coverage:
     runs-on: ubuntu-latest
