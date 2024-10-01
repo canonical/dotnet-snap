@@ -1,7 +1,7 @@
 name: dotnet
 base: core22
 adopt-info: dotnet-installer
-summary: .NET CLI tools, SDK and runtime
+summary: .NET CLI tools, SDK, and Runtime
 description: |
   .NET is the free, open-source, cross-platform framework for building modern
   apps and powerful cloud services that work on Android, iOS, GNU/Linux, macOS
@@ -15,10 +15,10 @@ description: |
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: classic
 
-#package-repositories:
-# - type: apt
-#   ppa: dotnet/snaps
-#   priority: always
+package-repositories:
+ - type: apt
+   ppa: dotnet/snaps
+   priority: always
 
 parts:
   pre-reqs:
@@ -34,7 +34,6 @@ parts:
       - libssl3
       - libstdc++6
       - libunwind8
-      - python3.10-minimal
       - zlib1g
 
   dotnet-installer:
@@ -42,12 +41,8 @@ parts:
     source: .
     build-packages:
       - dotnet-sdk-8.0
-    # build-attributes:
-    #   - enable-patchelf
-    # stage-packages:
-    #   - liblttng-ust1
-    #   - libicu70
-    #   - libssl3
+    stage-packages:
+      - jq
     override-build: |
       /usr/bin/dotnet --info
       SNAP_VERSION=$(/usr/bin/dotnet --list-runtimes | grep NETCore.App | awk '{print $2}' | sort -r | head -n 1)
@@ -69,17 +64,22 @@ parts:
       craftctl default
     override-stage: |
       craftctl default
+      # jq files
+      patchelf --set-interpreter /snap/dotnet/current/lib64/ld-linux-x86-64.so.2 usr/bin/jq
+      patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/bin/jq
+      # .NET Installer files
       patchelf --set-interpreter /snap/dotnet/current/lib64/ld-linux-x86-64.so.2 Dotnet.Installer.Console
       patchelf --force-rpath --set-rpath \$ORIGIN/netcoredeps:/snap/dotnet/current/usr/lib/x86_64-linux-gnu Dotnet.Installer.Console
     prime:
+      - usr/bin/jq
+      - usr/lib/*/libjq.so*
+      - usr/lib/*/libonig.so*
       - Dotnet.Installer.Console
       - Configuration/*
       - Scripts/*
 
   dotnet-host:
     plugin: nil
-    # build-attributes:
-    #   - enable-patchelf
     build-packages:
       - patchelf
     stage-packages:
@@ -98,7 +98,6 @@ parts:
 
 apps:
   dotnet:
-    command: usr/bin/python3.10 $SNAP/Scripts/dotnet-launcher.py
+    command: Scripts/dotnet-launcher.sh
     environment:
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
-      # LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAP/usr/lib/x86_64-linux-gnu
