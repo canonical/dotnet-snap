@@ -1,14 +1,14 @@
-#!/bin/sh -e
+#!/usr/bin/env bash
+
+set -euxo pipefail
 
 # Create $SNAP_COMMON if doesn't exist
-if [ ! -d "$SNAP_COMMON" ]; then
-    mkdir -p "$SNAP_COMMON"
-fi
+mkdir --parents "$SNAP_COMMON"
 
 # Create .NET installation directory
-mkdir "$SNAP_COMMON"/dotnet
+mkdir --parents "$SNAP_COMMON"/dotnet
 # Create snap configuration directory
-mkdir "$SNAP_COMMON"/snap
+mkdir --parents "$SNAP_COMMON"/snap
 
 # Create an empty local manifest file if it doesn't yet exist.
 if [ ! -e "$SNAP_COMMON"/snap/manifest.json ]; then

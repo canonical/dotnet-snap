@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/usr/bin/env bash
+
+set -euxo pipefail
 
 # Copy latest host to $SNAP_COMMON
-cp -RLp "$SNAP"/usr/lib/dotnet "$SNAP_COMMON"
+cp --recursive --dereference --preserve=mode,ownership,timestamps "$SNAP"/usr/lib/dotnet "$SNAP_COMMON"
