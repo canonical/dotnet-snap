@@ -2,7 +2,7 @@ using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Services.Contracts;
 
-public interface ISystemDService
+public interface ISystemdService
 {
     Task<InvocationResult> DaemonReload();
     Task<InvocationResult> EnableUnit(string unit);

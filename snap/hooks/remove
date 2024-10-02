@@ -1,23 +1,30 @@
-#!/bin/sh -e
+#!/usr/bin/env bash
+
+set -euxo pipefail
 
 # Remove remaining systemd-mount units from the system
-if [ -n "$(find /usr/lib/systemd/system/ -type f -name 'var-snap-dotnet-common-dotnet-*.mount')" ]; then
-    systemctl stop var-snap-dotnet-common-dotnet-*.mount
-    systemctl disable var-snap-dotnet-common-dotnet-*.mount
-    rm /usr/lib/systemd/system/var-snap-dotnet-common-dotnet-*.mount
-fi
+find /usr/lib/systemd/system/ -type f -name 'var-snap-dotnet-common-dotnet-*.mount' | while read -r file; do
+    unit_name=$(echo "$file" | rev | cut -d / -f 1 | rev)
+    systemctl stop "$unit_name"
+    systemctl disable "$unit_name"
+    rm "$file"
+done
 
 # Remove remaining systemd-path units from the system
-if [ -n "$(find /usr/lib/systemd/system/ -type f -name '*-update-watcher.*')" ]; then
-    # shellcheck disable=SC2035
-    systemctl stop *-update-watcher.*
-    # shellcheck disable=SC2035
-    systemctl disable *-update-watcher.*
-    rm /usr/lib/systemd/system/*-update-watcher.*
-fi
+find /usr/lib/systemd/system/ -type f -name 'dotnet-*-update-watcher.*' | while read -r file; do
+    unit_name=$(echo "$file" | rev | cut -d / -f 1 | rev)
+    systemctl stop "$unit_name"
+    systemctl disable "$unit_name"
+    rm "$file"
+done
 
-# Remove left-over content snaps
-# shellcheck disable=SC2046
-snap remove $(snap list | grep 'dotnet-*' | awk '{print $1}')
-# shellcheck disable=SC2046
-snap remove $(snap list | grep 'aspnetcore-*' | awk '{print $1}')
+systemctl daemon-reload
+
+# Remove left-over dotnet-* content snaps
+for snap in $(snap list | awk '{print $1}' | grep '^dotnet-.*'); do
+    snap remove --purge "$snap"
+done
+# Remove left-over aspnetcore-* content snaps
+for snap in $(snap list | awk '{print $1}' | grep '^aspnetcore-.*'); do
+    snap remove --purge "$snap"
+done

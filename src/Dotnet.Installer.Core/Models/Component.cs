@@ -22,7 +22,7 @@ public class Component
     public event EventHandler<InstallationFinishedEventArgs>? InstallationFinished;
 
     public async Task Install(IFileService fileService, IManifestService manifestService, ISnapService snapService,
-        ISystemDService systemDService, bool isRootComponent, ILogger? logger = default)
+        ISystemdService systemdService, bool isRootComponent, ILogger? logger = default)
     {
         if (Installation is null)
         {
@@ -40,7 +40,7 @@ public class Component
                 {
                     logger?.LogDebug($"Removing component {componentKeyToRemove} before installing {Key}.");
                     var componentToRemove = manifestService.Local.First(x => x.Key == componentKeyToRemove);
-                    await componentToRemove.Uninstall(fileService, manifestService, snapService, systemDService,
+                    await componentToRemove.Uninstall(fileService, manifestService, snapService, systemdService,
                         logger);
                 }
 
@@ -55,10 +55,10 @@ public class Component
                 await fileService.PlaceLinkageFile(Key);
 
                 // Install Systemd mount units
-                await PlaceMountUnits(fileService, manifestService, systemDService, logger);
+                await PlaceMountUnits(fileService, manifestService, systemdService, logger);
 
                 // Install update watcher unit
-                await PlacePathUnits(fileService, systemDService, logger);
+                await PlacePathUnits(fileService, systemdService, logger);
             }
 
             // Register the installation of this component in the local manifest file
@@ -67,7 +67,7 @@ public class Component
             foreach (var dependency in Dependencies)
             {
                 var component = manifestService.Remote.First(c => c.Key == dependency);
-                await component.Install(fileService, manifestService, snapService, systemDService,
+                await component.Install(fileService, manifestService, snapService, systemdService,
                     isRootComponent: false, logger);
             }
 
@@ -80,17 +80,17 @@ public class Component
     }
 
     public async Task Uninstall(IFileService fileService, IManifestService manifestService, ISnapService snapService,
-        ISystemDService systemDService, ILogger? logger = default)
+        ISystemdService systemdService, ILogger? logger = default)
     {
         if (Installation is not null)
         {
             if (Installation.IsRootComponent)
             {
                 // Uninstall systemd mount units
-                await RemoveMountUnits(fileService, manifestService, systemDService, logger);
+                await RemoveMountUnits(fileService, manifestService, systemdService, logger);
 
                 // Uninstall systemd path units
-                await RemovePathUnits(fileService, systemDService, logger);
+                await RemovePathUnits(fileService, systemdService, logger);
 
                 if (snapService.IsSnapInstalled(Key))
                 {
@@ -116,13 +116,13 @@ public class Component
             foreach (var dependency in Dependencies)
             {
                 var component = manifestService.Local.First(c => c.Key == dependency);
-                await component.Uninstall(fileService, manifestService, snapService, systemDService, logger);
+                await component.Uninstall(fileService, manifestService, snapService, systemdService, logger);
             }
         }
     }
 
     public async Task PlaceMountUnits(IFileService fileService, IManifestService manifestService,
-        ISystemDService systemDService, ILogger? logger = default)
+        ISystemdService systemdService, ILogger? logger = default)
     {
         var units = new StringBuilder();
         var unitPaths = fileService.EnumerateContentSnapMountFiles(Key);
@@ -138,18 +138,18 @@ public class Component
         await fileService.PlaceUnitsFile(manifestService.SnapConfigurationLocation, contentSnapName: Key,
             units.ToString());
 
-        var result = await systemDService.DaemonReload();
+        var result = await systemdService.DaemonReload();
         if (!result.IsSuccess)
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
-        await Mount(manifestService, fileService, systemDService, logger);
+        await Mount(manifestService, fileService, systemdService, logger);
     }
 
     public async Task RemoveMountUnits(IFileService fileService, IManifestService manifestService,
-        ISystemDService systemDService, ILogger? logger = default)
+        ISystemdService systemdService, ILogger? logger = default)
     {
-        await Unmount(fileService, manifestService, systemDService, logger);
+        await Unmount(fileService, manifestService, systemdService, logger);
 
         var units = await fileService.ReadUnitsFile(manifestService.SnapConfigurationLocation, Key);
 
@@ -161,28 +161,28 @@ public class Component
 
         fileService.DeleteUnitsFile(manifestService.SnapConfigurationLocation, Key);
 
-        var result = await systemDService.DaemonReload();
+        var result = await systemdService.DaemonReload();
         if (!result.IsSuccess)
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
     }
 
-    public async Task Mount(IManifestService manifestService, IFileService fileService, ISystemDService systemDService,
+    public async Task Mount(IManifestService manifestService, IFileService fileService, ISystemdService systemdService,
         ILogger? logger = default)
     {
         var units = await fileService.ReadUnitsFile(manifestService.SnapConfigurationLocation, Key);
 
         foreach (var unit in units)
         {
-            var result = await systemDService.EnableUnit(unit);
+            var result = await systemdService.EnableUnit(unit);
             if (!result.IsSuccess)
             {
                 throw new ApplicationException($"Could not enable unit {unit}");
             }
             logger?.LogDebug($"Enabled {unit}");
 
-            result = await systemDService.StartUnit(unit);
+            result = await systemdService.StartUnit(unit);
             if (!result.IsSuccess)
             {
                 throw new ApplicationException($"Could not start unit {unit}");
@@ -194,20 +194,20 @@ public class Component
     }
 
     public async Task Unmount(IFileService fileService, IManifestService manifestService,
-        ISystemDService systemDService, ILogger? logger = default)
+        ISystemdService systemdService, ILogger? logger = default)
     {
         var units = await fileService.ReadUnitsFile(manifestService.SnapConfigurationLocation, Key);
 
         foreach (var unit in units)
         {
-            var result = await systemDService.DisableUnit(unit);
+            var result = await systemdService.DisableUnit(unit);
             if (!result.IsSuccess)
             {
                 throw new ApplicationException($"Could not disable unit {unit}");
             }
             logger?.LogDebug($"Disabled {unit}");
 
-            result = await systemDService.StopUnit(unit);
+            result = await systemdService.StopUnit(unit);
             if (!result.IsSuccess)
             {
                 throw new ApplicationException($"Could not stop unit {unit}");
@@ -251,26 +251,26 @@ public class Component
         };
     }
 
-    private async Task PlacePathUnits(IFileService fileService, ISystemDService systemDService,
+    private async Task PlacePathUnits(IFileService fileService, ISystemdService systemdService,
         ILogger? logger = default)
     {
         fileService.InstallSystemdPathUnit(Key);
         logger?.LogDebug($"Placed upgrade watcher path and service units for snap {Key}");
 
-        var result = await systemDService.DaemonReload();
+        var result = await systemdService.DaemonReload();
         if (!result.IsSuccess)
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
 
-        result = await systemDService.EnableUnit($"{Key}-update-watcher.path");
+        result = await systemdService.EnableUnit($"{Key}-update-watcher.path");
         if (!result.IsSuccess)
         {
             throw new ApplicationException($"Could not enable {Key}-update-watcher.path");
         }
         logger?.LogDebug($"Enabled {Key}-update-watcher.path");
 
-        result = await systemDService.StartUnit($"{Key}-update-watcher.path");
+        result = await systemdService.StartUnit($"{Key}-update-watcher.path");
         if (!result.IsSuccess)
         {
             throw new ApplicationException($"Could not start {Key}-update-watcher.path");
@@ -278,17 +278,17 @@ public class Component
         logger?.LogDebug($"Started {Key}-update-watcher.path");
     }
 
-    private async Task RemovePathUnits(IFileService fileService, ISystemDService systemDService,
+    private async Task RemovePathUnits(IFileService fileService, ISystemdService systemdService,
         ILogger? logger = default)
     {
-        var result = await systemDService.DisableUnit($"{Key}-update-watcher.path");
+        var result = await systemdService.DisableUnit($"{Key}-update-watcher.path");
         if (!result.IsSuccess)
         {
             throw new ApplicationException($"Could not disable {Key}-update-watcher.path");
         }
         logger?.LogDebug($"Disabled {Key}-update-watcher.path");
 
-        result = await systemDService.StopUnit($"{Key}-update-watcher.path");
+        result = await systemdService.StopUnit($"{Key}-update-watcher.path");
         if (!result.IsSuccess)
         {
             throw new ApplicationException($"Could not stop {Key}-update-watcher.path");
@@ -298,7 +298,7 @@ public class Component
         fileService.UninstallSystemdPathUnit(Key);
         logger?.LogDebug($"Removed upgrade watcher path and service units for snap {Key}");
 
-        result = await systemDService.DaemonReload();
+        result = await systemdService.DaemonReload();
         if (!result.IsSuccess)
         {
             throw new ApplicationException("Could not reload systemd daemon");

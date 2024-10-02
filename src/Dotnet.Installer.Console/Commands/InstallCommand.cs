@@ -8,21 +8,21 @@ public class InstallCommand : Command
     private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
     private readonly ISnapService _snapService;
-    private readonly ISystemDService _systemDService;
+    private readonly ISystemdService _systemdService;
     private readonly ILogger _logger;
 
     public InstallCommand(
         IFileService fileService,
         IManifestService manifestService,
         ISnapService snapService,
-        ISystemDService systemDService,
+        ISystemdService systemdService,
         ILogger logger)
         : base("install", "Installs a new .NET component in the system")
     {
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
         _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
-        _systemDService = systemDService ?? throw new ArgumentNullException(nameof(systemDService));
+        _systemdService = systemdService ?? throw new ArgumentNullException(nameof(systemdService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         var componentArgument = new Argument<string>(
@@ -63,7 +63,7 @@ public class InstallCommand : Command
                     Environment.Exit(-1);
                 }
 
-                await requestedComponent.Install(_fileService, _manifestService, _snapService, _systemDService,
+                await requestedComponent.Install(_fileService, _manifestService, _snapService, _systemdService,
                     isRootComponent: true, _logger);
 
                 return;
