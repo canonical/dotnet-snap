@@ -26,7 +26,7 @@ public class ComponentTests
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
-        var systemDService = new Mock<ISystemDService>();
+        var systemDService = new Mock<ISystemdService>();
 
         snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
             .ReturnsAsync(new InvocationResult(
@@ -70,7 +70,7 @@ public class ComponentTests
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
-        var systemDService = new Mock<ISystemDService>();
+        var systemDService = new Mock<ISystemdService>();
 
         snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
             .ReturnsAsync(new InvocationResult(
@@ -135,7 +135,7 @@ public class ComponentTests
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
-        var systemDService = new Mock<ISystemDService>();
+        var systemDService = new Mock<ISystemdService>();
 
         manifestService.Setup(s => s.Remote).Returns([component1, component2, component3]);
         manifestService.Setup(e => e.Add(
@@ -189,7 +189,7 @@ public class ComponentTests
         var fileService = new Mock<IFileService>();
         var manifestService = new Mock<IManifestService>();
         var snapService = new Mock<ISnapService>();
-        var systemDService = new Mock<ISystemDService>();
+        var systemDService = new Mock<ISystemdService>();
 
         fileService.Setup(f => f.FileExists(It.IsAny<string>())).Returns(true);
         manifestService.Setup(m => m.DotnetInstallLocation).Returns("dotnet_install_path");

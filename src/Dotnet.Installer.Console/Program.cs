@@ -29,7 +29,7 @@ class Program
         var fileService = new FileService();
         var manifestService = new ManifestService();
         var snapService = new SnapService();
-        var systemDService = new SystemDService();
+        var systemDService = new SystemdService();
         var logger = new Logger();
 
         var rootCommand = new RootCommand(".NET Installer command-line tool")

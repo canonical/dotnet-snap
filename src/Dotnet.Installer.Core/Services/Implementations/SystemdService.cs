@@ -3,7 +3,7 @@ using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
 
-public class SystemDService : ISystemDService
+public class SystemdService : ISystemdService
 {
     public async Task<InvocationResult> DaemonReload()
     {
