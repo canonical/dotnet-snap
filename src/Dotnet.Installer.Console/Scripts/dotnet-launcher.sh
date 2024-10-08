@@ -15,17 +15,18 @@ run_elevated() {
     if [[ "$EUID" -eq 0 ]]; then
         "${command_to_execute[@]}"
     else
-        if [[ -e /usr/bin/pkexec ]]; then
-            pkexec "${command_to_execute[@]}" env DOTNET_INSTALL_DIR="$dotnet_install_dir" DOTNET_INSTALLER_DEBUG="$should_debug"
-        else
-            sudo --preserve-env=DOTNET_INSTALL_DIR,DOTNET_INSTALLER_DEBUG "${command_to_execute[@]}"
-        fi
+        sudo --preserve-env=DOTNET_INSTALL_DIR,DOTNET_INSTALLER_DEBUG "${command_to_execute[@]}"
     fi
+
+    return $?
 }
 
 # Main script execution
 if [[ ! -e "/snap/dotnet-manifest/current/supported.json" ]]; then
-    if [[ $(run_elevated "0" snap install dotnet-manifest) -ne 0 ]]; then
+    echo "Welcome to .NET on Snap!"
+    echo "Looks like this is your first time running snapped .NET, hold tight while I check which .NET versions are available for you."
+    if ! run_elevated "0" snap install dotnet-manifest; then
+        echo "We could not install the manifest content snap, please check your credentials or run this command with sudo."
         exit 255
     fi
 fi
@@ -51,14 +52,13 @@ else
     manifest_data=$(< "$manifest_path")
 
     if [[ $(echo "$manifest_data" | "$SNAP"/usr/bin/jq 'length') -eq 0 ]]; then
-        echo "Welcome to .NET on Snap!"
         echo "Looks like you don't yet have a .NET SDK or Runtime installed."
-        echo "We are downloading and installing the latest SDK for you to use. It should only be a few moments."
+        echo "I am downloading and installing the latest SDK for you to use. It should only be a few moments."
 
         command_to_execute=("$SNAP/Dotnet.Installer.Console" "install" "sdk" "latest")
 
-        if [[ $(run_elevated "0" "${command_to_execute[@]}") -ne 0 ]]; then
-            echo "Could not install the latest .NET SDK."
+        if ! run_elevated "0" "${command_to_execute[@]}"; then
+            echo "Could not install the latest .NET SDK. Please check your credentials or run this command with sudo."
             exit 255
         fi
     fi
