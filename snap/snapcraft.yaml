@@ -16,9 +16,15 @@ grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: classic
 
 package-repositories:
- - type: apt
-   ppa: dotnet/snaps
-   priority: always
+  - type: apt
+    ppa: dotnet/snaps
+    priority: always
+
+architectures:
+  - build-on: [amd64]
+    build-for: [amd64]
+  - build-on: [arm64]
+    build-for: [arm64]
 
 parts:
   pre-reqs:
@@ -64,12 +70,24 @@ parts:
       craftctl default
     override-stage: |
       craftctl default
+
+      if [ "${CRAFT_ARCH_BUILD_FOR}" = "amd64" ]; then
+        INTERPRETER="/snap/dotnet/current/lib64/ld-linux-x86-64.so.2"
+        RPATH="/snap/dotnet/current/usr/lib/x86_64-linux-gnu"
+      elif [ "${CRAFT_ARCH_BUILD_FOR}" = "arm64" ]; then
+        INTERPRETER="/snap/dotnet/current/lib/ld-linux-aarch64.so.1"
+        RPATH="/snap/dotnet/current/usr/lib/aarch64-linux-gnu"
+      else
+        echo "Unknown architecture (${CRAFT_ARCH_BUILD_FOR})"
+        exit 1
+      fi
+
       # jq files
-      patchelf --set-interpreter /snap/dotnet/current/lib64/ld-linux-x86-64.so.2 usr/bin/jq
-      patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/bin/jq
+      patchelf --set-interpreter $INTERPRETER usr/bin/jq
+      patchelf --force-rpath --set-rpath $RPATH usr/bin/jq
       # .NET Installer files
-      patchelf --set-interpreter /snap/dotnet/current/lib64/ld-linux-x86-64.so.2 Dotnet.Installer.Console
-      patchelf --force-rpath --set-rpath \$ORIGIN/netcoredeps:/snap/dotnet/current/usr/lib/x86_64-linux-gnu Dotnet.Installer.Console
+      patchelf --set-interpreter $INTERPRETER Dotnet.Installer.Console
+      patchelf --force-rpath --set-rpath \$ORIGIN/netcoredeps:$RPATH Dotnet.Installer.Console
     prime:
       - usr/bin/jq
       - usr/lib/*/libjq.so*
@@ -86,10 +104,22 @@ parts:
       - dotnet-hostfxr-8.0
     override-stage: |
       craftctl default
+
+      if [ "${CRAFT_ARCH_BUILD_FOR}" = "amd64" ]; then
+        INTERPRETER="/snap/dotnet/current/lib64/ld-linux-x86-64.so.2"
+        RPATH="/snap/dotnet/current/usr/lib/x86_64-linux-gnu"
+      elif [ "${CRAFT_ARCH_BUILD_FOR}" = "arm64" ]; then
+        INTERPRETER="/snap/dotnet/current/lib/ld-linux-aarch64.so.1"
+        RPATH="/snap/dotnet/current/usr/lib/aarch64-linux-gnu"
+      else
+        echo "Unknown architecture (${CRAFT_ARCH_BUILD_FOR})"
+        exit 1
+      fi
+
       DOTNET_VERSION=$(craftctl get version)
-      patchelf --set-interpreter /snap/dotnet/current/lib64/ld-linux-x86-64.so.2 usr/lib/dotnet/dotnet
-      patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/lib/dotnet/dotnet
-      patchelf --force-rpath --set-rpath /snap/dotnet/current/usr/lib/x86_64-linux-gnu usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
+      patchelf --set-interpreter $INTERPRETER usr/lib/dotnet/dotnet
+      patchelf --force-rpath --set-rpath $RPATH usr/lib/dotnet/dotnet
+      patchelf --force-rpath --set-rpath $RPATH usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
 
   netstandard-targeting-pack:
     plugin: nil
