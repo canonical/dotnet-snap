@@ -13,15 +13,23 @@ permissions:
 
 jobs:
   unit-test:
-    runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        os:
+          - [self-hosted, large, jammy, X64]
+          - [self-hosted, large, jammy, ARM64]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        id: checkout
 
       - name: Install .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+        id: install-dotnet
+        run: |
+          sudo apt-get update
+          sudo apt-get upgrade --yes
+          sudo apt-get install --yes dotnet-sdk-8.0
+          echo "DPKG_ARCH=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
 
       - name: Run Tests
         run: dotnet test --verbosity normal --logger trx --results-directory TestResults
@@ -31,16 +39,25 @@ jobs:
         if: always()
         with:
           check_name: test-results
-          comment_title: Test Results
+          comment_title: Test Results (${{ steps.install-dotnet.outputs.DPKG_ARCH }})
           files: |
             TestResults/*.trx
 
   snapcraft-build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os:
+          - [self-hosted, large, jammy, X64]
+          - [self-hosted, large, jammy, ARM64]
+    runs-on: ${{ matrix.os }}
     needs: unit-test
-
     steps:
       - uses: actions/checkout@v4
+        id: checkout
+
+      - name: Retrieve Architecture
+        id: get-arch
+        run: echo "DPKG_ARCH=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
 
       - name: Run Snapcraft
         id: snapcraft
@@ -50,19 +67,23 @@ jobs:
         id: upload-artifact
         uses: actions/upload-artifact@v4
         with:
-          name: snap
+          name: dotnet-${{ steps.get-arch.outputs.DPKG_ARCH }}
           path: ${{ steps.snapcraft.outputs.snap }}
 
   snapcraft-publish:
     runs-on: ubuntu-latest
     if: ${{ contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name == 'main' }}
     needs: snapcraft-build
-
+    strategy:
+      matrix:
+        artifact-name:
+          - dotnet-amd64
+          - dotnet-arm64
     steps:
       - uses: actions/download-artifact@v4
         id: download-artifact
         with:
-          name: snap
+          name: ${{ matrix.artifact-name }}
 
       - name: Gather filename
         id: gather-filename
@@ -70,7 +91,7 @@ jobs:
           ARTIFACT_PATH: ${{ steps.download-artifact.outputs.download-path }}
         run: |
           ls -la $ARTIFACT_PATH
-          SNAP_FILE_NAME=$(ls ${ARTIFACT_PATH}/${SNAP_NAME}*.snap)
+          SNAP_FILE_NAME=$(ls ${ARTIFACT_PATH}/dotnet*.snap)
           echo "SNAP_PATH=${SNAP_FILE_NAME}" >> "$GITHUB_OUTPUT"
 
       - uses: snapcore/action-publish@v1
@@ -85,14 +106,16 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v4
+        id: checkout
 
       - name: Install .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+        id: install-dotnet
+        run: |
+          sudo apt-get update
+          sudo apt-get upgrade --yes
+          sudo apt-get install --yes dotnet-sdk-8.0
 
       - name: Install reportgenerator tool
         run: |
