@@ -29,15 +29,15 @@ public class ComponentTests
         var systemDService = new Mock<ISystemdService>();
 
         snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
-            .ReturnsAsync(new InvocationResult(
-                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(
+                exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
         systemDService.Setup(s => s.DaemonReload())
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
         systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
         systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
 
         // Act
         var evt = await Assert.RaisesAsync<InstallationStartedEventArgs>(
@@ -73,15 +73,15 @@ public class ComponentTests
         var systemDService = new Mock<ISystemdService>();
 
         snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
-            .ReturnsAsync(new InvocationResult(
-                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(
+                exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
         systemDService.Setup(s => s.DaemonReload())
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
         systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
         systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
 
         // Act
         var evt = await Assert.RaisesAsync<InstallationFinishedEventArgs>(
@@ -146,15 +146,15 @@ public class ComponentTests
             });
 
         snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
-            .ReturnsAsync(new InvocationResult(
-                isSuccess: true, standardOutput: string.Empty, standardError: string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(
+                exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
         systemDService.Setup(s => s.DaemonReload())
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
         systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
         systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
 
         // Act
         await component1.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object,
@@ -201,11 +201,11 @@ public class ComponentTests
             });
 
         systemDService.Setup(s => s.DaemonReload())
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
         systemDService.Setup(s => s.DisableUnit(It.IsAny<string>()))
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
         systemDService.Setup(s => s.StopUnit(It.IsAny<string>()))
-            .ReturnsAsync(new InvocationResult(true, string.Empty, string.Empty));
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
 
         installedComponents.Add(component1);
 

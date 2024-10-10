@@ -10,34 +10,29 @@ public class SystemdService : ISystemdService
         RedirectStandardError = true,
         RedirectStandardOutput = true,
     };
-    
-    public async Task<InvocationResult> DaemonReload()
+
+    public Task<Terminal.InvocationResult> DaemonReload()
     {
-        var result = await Terminal.Invoke("systemctl", _globalSystemdOptions, "daemon-reload");
-        return new InvocationResult(result == 0, string.Empty, string.Empty);
+        return Terminal.Invoke("systemctl", _globalSystemdOptions, "daemon-reload");
     }
 
-    public async Task<InvocationResult> EnableUnit(string unit)
+    public Task<Terminal.InvocationResult> EnableUnit(string unit)
     {
-        var result = await Terminal.Invoke("systemctl", _globalSystemdOptions, "enable", unit);
-        return new InvocationResult(result == 0, string.Empty, string.Empty);
+        return Terminal.Invoke("systemctl", _globalSystemdOptions, "enable", unit);
     }
 
-    public async Task<InvocationResult> DisableUnit(string unit)
+    public Task<Terminal.InvocationResult> DisableUnit(string unit)
     {
-        var result = await Terminal.Invoke("systemctl", _globalSystemdOptions, "disable", unit);
-        return new InvocationResult(result == 0, string.Empty, string.Empty);
+        return Terminal.Invoke("systemctl", _globalSystemdOptions, "disable", unit);
     }
 
-    public async Task<InvocationResult> StartUnit(string unit)
+    public Task<Terminal.InvocationResult> StartUnit(string unit)
     {
-        var result = await Terminal.Invoke("systemctl", _globalSystemdOptions, "start", unit);
-        return new InvocationResult(result == 0, string.Empty, string.Empty);
+        return Terminal.Invoke("systemctl", _globalSystemdOptions, "start", unit);
     }
 
-    public async Task<InvocationResult> StopUnit(string unit)
+    public Task<Terminal.InvocationResult> StopUnit(string unit)
     {
-        var result = await Terminal.Invoke("systemctl", _globalSystemdOptions, "stop", unit);
-        return new InvocationResult(result == 0, string.Empty, string.Empty);
+        return Terminal.Invoke("systemctl", _globalSystemdOptions, "stop", unit);
     }
 }

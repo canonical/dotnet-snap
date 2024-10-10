@@ -10,23 +10,21 @@ public class SnapService : ISnapService
         return Directory.Exists(Path.Combine("/", "snap", name));
     }
 
-    public async Task<InvocationResult> Install(string name, CancellationToken cancellationToken = default)
+    public Task<Terminal.InvocationResult> Install(string name, CancellationToken cancellationToken = default)
     {
-        var result = await Terminal.Invoke("snap", "install", name);
-        return new InvocationResult(result == 0, "", "");
+        return Terminal.Invoke("snap", "install", name);
     }
 
-    public async Task<InvocationResult> Remove(string name, bool purge = false, CancellationToken cancellationToken = default)
+    public Task<Terminal.InvocationResult> Remove(string name, bool purge = false, CancellationToken cancellationToken = default)
     {
         var arguments = new List<string>
         {
             "remove"
         };
-        
+
         if (purge) arguments.Add("--purge");
         arguments.Add(name);
-        
-        var result = await Terminal.Invoke("snap", arguments.ToArray());
-        return new InvocationResult(result == 0, "", "");
+
+        return Terminal.Invoke("snap", arguments.ToArray());
     }
 }

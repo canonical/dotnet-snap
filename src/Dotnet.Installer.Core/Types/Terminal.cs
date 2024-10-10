@@ -4,12 +4,12 @@ namespace Dotnet.Installer.Core.Types;
 
 public static class Terminal
 {
-    public static async Task<int> Invoke(string program, params string[] arguments)
+    public static async Task<InvocationResult> Invoke(string program, params string[] arguments)
     {
         return await Invoke(program, options: null, arguments);
     }
 
-    public static async Task<int> Invoke(string program, InvocationOptions? options = default,
+    public static async Task<InvocationResult> Invoke(string program, InvocationOptions? options = default,
         params string[] arguments)
     {
         options ??= InvocationOptions.Default;
@@ -28,7 +28,16 @@ public static class Terminal
         process.Start();
         await process.WaitForExitAsync();
 
-        return process.ExitCode;
+        return new InvocationResult
+        {
+            ExitCode = process.ExitCode,
+            RedirectedStandardError = options.RedirectStandardError,
+            RedirectedStandardOutput = options.RedirectStandardOutput,
+            StandardError = options.RedirectStandardError ?
+                await process.StandardError.ReadToEndAsync() : default,
+            StandardOutput = options.RedirectStandardOutput ?
+                await process.StandardOutput.ReadToEndAsync() : default
+        };
     }
 
     public class InvocationOptions
@@ -37,5 +46,28 @@ public static class Terminal
 
         public bool RedirectStandardOutput { get; set; } = false;
         public bool RedirectStandardError { get; set; } = false;
+    }
+
+    public class InvocationResult
+    {
+        public InvocationResult()
+        { }
+
+        public InvocationResult(int exitCode, string standardOutput, string standardError)
+        {
+            ExitCode = exitCode;
+            StandardOutput = standardOutput;
+            StandardError = standardError;
+
+            RedirectedStandardError = true;
+            RedirectedStandardOutput = true;
+        }
+
+        public bool IsSuccess => ExitCode == 0;
+        public int ExitCode { get; init; }
+        public bool RedirectedStandardOutput { get; init; }
+        public bool RedirectedStandardError { get; init; }
+        public string? StandardOutput { get; init; }
+        public string? StandardError { get; init; }
     }
 }
