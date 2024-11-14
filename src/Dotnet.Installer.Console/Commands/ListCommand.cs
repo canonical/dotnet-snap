@@ -19,14 +19,23 @@ public class ListCommand : Command
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
 
-        this.SetHandler(Handle);
+        var includeUnsupportedOption = new Option<bool>(
+            name: "--all",
+            description: "Include unsupported .NET components in the list output.")
+            {
+                IsRequired = false
+            };
+
+        AddOption(includeUnsupportedOption);
+
+        this.SetHandler(Handle, includeUnsupportedOption);
     }
 
-    private async Task Handle()
+    private async Task Handle(bool includeUnsupported)
     {
         try
         {
-            await _manifestService.Initialize();
+            await _manifestService.Initialize(includeUnsupported);
 
             var table = new Table();
 
