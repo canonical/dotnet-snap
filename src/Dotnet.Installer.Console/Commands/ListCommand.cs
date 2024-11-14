@@ -58,19 +58,33 @@ public class ListCommand : Command
                     components[installedComponent.Name] = (Installed: true, Version: version);
                 }
 
-                var dotNetRuntimeStatus = ComponentStatus(Constants.DotnetRuntimeComponentName, majorVersionGroup.Key);
-                var aspNetCoreRuntimeStatus = ComponentStatus(Constants.AspnetCoreRuntimeComponentName, majorVersionGroup.Key);
-                var sdkStatus = ComponentStatus(Constants.SdkComponentName, majorVersionGroup.Key);
-
                 var endOfLife = majorVersionGroup.First().EndOfLife;
                 var isEndOfLife = endOfLife < DateTime.Now;
+
+                var dotnetVersionStringBuilder = new StringBuilder();
+                dotnetVersionStringBuilder.Append($".NET {majorVersionGroup.Key}");
+                if (majorVersionGroup.First().IsLts)
+                    dotnetVersionStringBuilder.Append(" LTS");
+
+                var dotNetRuntimeStatus = ComponentStatus(
+                    Constants.DotnetRuntimeComponentName,
+                    majorVersionGroup.Key,
+                    isEndOfLife);
+                var aspNetCoreRuntimeStatus = ComponentStatus(
+                    Constants.AspnetCoreRuntimeComponentName,
+                    majorVersionGroup.Key,
+                    isEndOfLife);
+                var sdkStatus = ComponentStatus(Constants.SdkComponentName,
+                    majorVersionGroup.Key,
+                    isEndOfLife);
 
                 var eolStringBuilder = new StringBuilder();
                 eolStringBuilder.Append(isEndOfLife ? "[bold red]" : "[bold green]");
                 eolStringBuilder.Append(endOfLife.ToShortDateString());
                 eolStringBuilder.Append("[/]");
 
-                table.AddRow($".NET {majorVersionGroup.Key.ToString()}",
+                table.AddRow(
+                    dotnetVersionStringBuilder.ToString(),
                     dotNetRuntimeStatus,
                     aspNetCoreRuntimeStatus,
                     sdkStatus,
@@ -78,7 +92,7 @@ public class ListCommand : Command
 
                 continue;
 
-                string ComponentStatus(string key, int majorVersion)
+                string ComponentStatus(string key, int majorVersion, bool isEol)
                 {
                     string status;
                     var available = _manifestService.Remote.Any(c => c.Name == key && c.MajorVersion == majorVersion);
@@ -90,8 +104,10 @@ public class ListCommand : Command
                     else
                     {
                         status = available
-                            ? "[bold blue]Available[/]"
-                            : "[bold grey]Unavailable[/]";
+                            ? isEol
+                                ? "Available"
+                                : "[bold blue]Available[/]"
+                            : "[bold grey]-[/]";
                     }
 
                     return status;
