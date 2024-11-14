@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.Text;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
@@ -33,6 +34,7 @@ public class ListCommand : Command
             table.AddColumn(new TableColumn(".NET Runtime"));
             table.AddColumn(new TableColumn("ASP.NET Core Runtime"));
             table.AddColumn(new TableColumn("SDK"));
+            table.AddColumn(new TableColumn("End of Life"));
 
             foreach (var majorVersionGroup in _manifestService.Merged
                          .GroupBy(c => c.MajorVersion)
@@ -51,7 +53,20 @@ public class ListCommand : Command
                 var aspNetCoreRuntimeStatus = ComponentStatus(Constants.AspnetCoreRuntimeComponentName, majorVersionGroup.Key);
                 var sdkStatus = ComponentStatus(Constants.SdkComponentName, majorVersionGroup.Key);
 
-                table.AddRow($".NET {majorVersionGroup.Key.ToString()}", dotNetRuntimeStatus, aspNetCoreRuntimeStatus, sdkStatus);
+                var endOfLife = majorVersionGroup.First().EndOfLife;
+                var isEndOfLife = endOfLife < DateTime.Now;
+
+                var eolStringBuilder = new StringBuilder();
+                eolStringBuilder.Append(isEndOfLife ? "[bold red]" : "[bold green]");
+                eolStringBuilder.Append(endOfLife.ToShortDateString());
+                eolStringBuilder.Append("[/]");
+
+                table.AddRow($".NET {majorVersionGroup.Key.ToString()}",
+                    dotNetRuntimeStatus,
+                    aspNetCoreRuntimeStatus,
+                    sdkStatus,
+                    eolStringBuilder.ToString());
+
                 continue;
 
                 string ComponentStatus(string key, int majorVersion)
