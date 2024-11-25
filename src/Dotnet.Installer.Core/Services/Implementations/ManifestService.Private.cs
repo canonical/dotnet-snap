@@ -54,7 +54,7 @@ public partial class ManifestService
     private async Task Refresh(CancellationToken cancellationToken = default)
     {
         _local = await LoadLocal(cancellationToken);
-        _remote = await LoadRemote(_includeArchive, cancellationToken);
+        _remote = await LoadRemote(_includeUnsupported, cancellationToken);
         _merged = Merge(_remote, _local);
     }
 

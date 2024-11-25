@@ -14,7 +14,7 @@ public partial class ManifestService : IManifestService
     private List<Component> _local = [];
     private List<Component> _remote = [];
     private List<Component> _merged = [];
-    private bool _includeArchive = false;
+    private bool _includeUnsupported = false;
 
     public string SnapConfigurationLocation => SnapConfigPath;
     public string DotnetInstallLocation =>
@@ -49,9 +49,9 @@ public partial class ManifestService : IManifestService
         private set => _merged = value.ToList();
     }
 
-    public Task Initialize(bool includeArchive = false, CancellationToken cancellationToken = default)
+    public Task Initialize(bool includeUnsupported = false, CancellationToken cancellationToken = default)
     {
-        _includeArchive = includeArchive;
+        _includeUnsupported = includeUnsupported;
         return Refresh(cancellationToken);
     }
 

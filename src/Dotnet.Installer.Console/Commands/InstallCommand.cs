@@ -47,7 +47,7 @@ public class InstallCommand : Command
         {
             if (Directory.Exists(_manifestService.DotnetInstallLocation))
             {
-                await _manifestService.Initialize(includeArchive: true);
+                await _manifestService.Initialize(includeUnsupported: true);
 
                 var requestedComponent = version switch
                 {

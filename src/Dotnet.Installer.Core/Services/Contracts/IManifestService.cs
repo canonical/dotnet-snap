@@ -11,7 +11,7 @@ public interface IManifestService
     IEnumerable<Component> Remote { get; }
     IEnumerable<Component> Merged { get; }
 
-    Task Initialize(bool includeArchive = false, CancellationToken cancellationToken = default);
+    Task Initialize(bool includeUnsupported = false, CancellationToken cancellationToken = default);
     Task Add(Component component, bool isRootComponent, CancellationToken cancellationToken = default);
     Task Remove(Component component, CancellationToken cancellationToken = default);
     Component? MatchVersion(string component, string version);
