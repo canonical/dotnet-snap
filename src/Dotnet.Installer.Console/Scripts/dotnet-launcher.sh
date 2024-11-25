@@ -55,7 +55,7 @@ else
         echo "Looks like you don't yet have a .NET SDK or Runtime installed."
         echo "I am downloading and installing the latest SDK for you to use. It should only be a few moments."
 
-        command_to_execute=("$SNAP/Dotnet.Installer.Console" "install" "sdk" "latest")
+        command_to_execute=("$SNAP/Dotnet.Installer.Console" "install" "sdk" "lts")
 
         if ! run_elevated "0" "${command_to_execute[@]}"; then
             echo "Could not install the latest .NET SDK. Please check your credentials or run this command with sudo."
