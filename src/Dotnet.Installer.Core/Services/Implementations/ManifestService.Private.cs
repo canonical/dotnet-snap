@@ -32,7 +32,9 @@ public partial class ManifestService
         };
 
         if (includeUnsupported)
+        {
             filesToRead.Add(Path.Join("/", "snap", "dotnet-manifest", "current", "unsupported.json"));
+        }
 
         var components = new List<Component>();
         foreach (var contentStream in filesToRead.Select(File.OpenRead))
