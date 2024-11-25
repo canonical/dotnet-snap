@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.Text;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
@@ -18,14 +19,23 @@ public class ListCommand : Command
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
 
-        this.SetHandler(Handle);
+        var includeUnsupportedOption = new Option<bool>(
+            name: "--all",
+            description: "Include unsupported .NET components in the list output.")
+            {
+                IsRequired = false
+            };
+
+        AddOption(includeUnsupportedOption);
+
+        this.SetHandler(Handle, includeUnsupportedOption);
     }
 
-    private async Task Handle()
+    private async Task Handle(bool includeUnsupported)
     {
         try
         {
-            await _manifestService.Initialize();
+            await _manifestService.Initialize(includeUnsupported);
 
             var table = new Table();
 
@@ -33,6 +43,7 @@ public class ListCommand : Command
             table.AddColumn(new TableColumn(".NET Runtime"));
             table.AddColumn(new TableColumn("ASP.NET Core Runtime"));
             table.AddColumn(new TableColumn("SDK"));
+            table.AddColumn(new TableColumn("End of Life"));
 
             foreach (var majorVersionGroup in _manifestService.Merged
                          .GroupBy(c => c.MajorVersion)
@@ -47,30 +58,48 @@ public class ListCommand : Command
                     components[installedComponent.Name] = (Installed: true, Version: version);
                 }
 
-                var dotNetRuntimeStatus = ComponentStatus(Constants.DotnetRuntimeComponentName, majorVersionGroup.Key);
-                var aspNetCoreRuntimeStatus = ComponentStatus(Constants.AspnetCoreRuntimeComponentName, majorVersionGroup.Key);
-                var sdkStatus = ComponentStatus(Constants.SdkComponentName, majorVersionGroup.Key);
+                var endOfLife = majorVersionGroup.First().EndOfLife;
+                var isEndOfLife = endOfLife < DateTime.Now;
+                var isLts = majorVersionGroup.First().IsLts;
 
-                table.AddRow($".NET {majorVersionGroup.Key.ToString()}", dotNetRuntimeStatus, aspNetCoreRuntimeStatus, sdkStatus);
+                var dotnetVersionString = $".NET {majorVersionGroup.Key}{(isLts ? " LTS" : "")}";
+                var dotNetRuntimeStatus = ComponentStatus(
+                    Constants.DotnetRuntimeComponentName,
+                    majorVersionGroup.Key,
+                    isEndOfLife);
+                var aspNetCoreRuntimeStatus = ComponentStatus(
+                    Constants.AspnetCoreRuntimeComponentName,
+                    majorVersionGroup.Key,
+                    isEndOfLife);
+                var sdkStatus = ComponentStatus(Constants.SdkComponentName,
+                    majorVersionGroup.Key,
+                    isEndOfLife);
+                var eolString = $"[bold {(isEndOfLife ? "red" : "green")}]{endOfLife:d}[/]";
+
+                table.AddRow(
+                    dotnetVersionString,
+                    dotNetRuntimeStatus,
+                    aspNetCoreRuntimeStatus,
+                    sdkStatus,
+                    eolString);
+
                 continue;
 
-                string ComponentStatus(string key, int majorVersion)
+                string ComponentStatus(string key, int majorVersion, bool isEol)
                 {
-                    string status;
-                    var available = _manifestService.Remote.Any(c => c.Name == key && c.MajorVersion == majorVersion);
-
                     if (components.TryGetValue(key, out var component))
                     {
-                        status = $"[bold green]Installed [[{component.Version}]][/]";
-                    }
-                    else
-                    {
-                        status = available
-                            ? "[bold blue]Available[/]"
-                            : "[bold grey]Unavailable[/]";
+                        return $"[bold green]Installed [[{component.Version}]][/]";
                     }
 
-                    return status;
+                    var available = _manifestService.Remote.Any(c => c.Name == key && c.MajorVersion == majorVersion);
+
+                    if (!available)
+                    {
+                        return "[grey]-[/]";
+                    }
+
+                    return isEol ? "[grey]Available[/]" : "[bold blue]Available[/]";
                 }
             }
 

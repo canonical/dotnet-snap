@@ -26,22 +26,29 @@ public partial class ManifestService
     private static async Task<List<Component>> LoadRemote(bool includeUnsupported = false,
         CancellationToken cancellationToken = default)
     {
-        var supportedJsonFilePath = Path.Join("/", "snap", "dotnet-manifest", "current", "supported.json");
-        if (!File.Exists(supportedJsonFilePath))
+        var filesToRead = new List<string>
         {
-            throw new ApplicationException("dotnet-manifest snap is not installed. Please run 'sudo snap install dotnet-manifest'.");
+            Path.Join("/", "snap", "dotnet-manifest", "current", "supported.json")
+        };
+
+        if (includeUnsupported)
+        {
+            filesToRead.Add(Path.Join("/", "snap", "dotnet-manifest", "current", "unsupported.json"));
         }
 
-        var contentStream = File.OpenRead(supportedJsonFilePath);
-        var components = await JsonSerializer.DeserializeAsync<List<Component>>(
-            contentStream, JsonSerializerOptions, cancellationToken);
-
-        if (components is null)
+        var components = new List<Component>();
+        foreach (var contentStream in filesToRead.Select(File.OpenRead))
         {
-            throw new ApplicationException("Could not read the supported.json file.");
-        }
+            var currentComponents = await JsonSerializer.DeserializeAsync<List<Component>>(
+                contentStream,
+                JsonSerializerOptions,
+                cancellationToken: cancellationToken);
 
-        // TODO Add unsupported flag support
+            if (currentComponents is not null)
+            {
+                components.AddRange(currentComponents);
+            }
+        }
 
         return components;
     }
@@ -49,7 +56,7 @@ public partial class ManifestService
     private async Task Refresh(CancellationToken cancellationToken = default)
     {
         _local = await LoadLocal(cancellationToken);
-        _remote = await LoadRemote(_includeArchive, cancellationToken);
+        _remote = await LoadRemote(_includeUnsupported, cancellationToken);
         _merged = Merge(_remote, _local);
     }
 
