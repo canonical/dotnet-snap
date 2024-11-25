@@ -60,12 +60,9 @@ public class ListCommand : Command
 
                 var endOfLife = majorVersionGroup.First().EndOfLife;
                 var isEndOfLife = endOfLife < DateTime.Now;
+                var isLts = majorVersionGroup.First().IsLts;
 
-                var dotnetVersionStringBuilder = new StringBuilder();
-                dotnetVersionStringBuilder.Append($".NET {majorVersionGroup.Key}");
-                if (majorVersionGroup.First().IsLts)
-                    dotnetVersionStringBuilder.Append(" LTS");
-
+                var dotnetVersionString = $".NET {majorVersionGroup.Key}{(isLts ? " LTS" : "")}";
                 var dotNetRuntimeStatus = ComponentStatus(
                     Constants.DotnetRuntimeComponentName,
                     majorVersionGroup.Key,
@@ -77,18 +74,14 @@ public class ListCommand : Command
                 var sdkStatus = ComponentStatus(Constants.SdkComponentName,
                     majorVersionGroup.Key,
                     isEndOfLife);
-
-                var eolStringBuilder = new StringBuilder();
-                eolStringBuilder.Append(isEndOfLife ? "[bold red]" : "[bold green]");
-                eolStringBuilder.Append(endOfLife.ToShortDateString());
-                eolStringBuilder.Append("[/]");
+                var eolString = $"[bold {(isEndOfLife ? "red" : "green")}]{endOfLife:d}[/]";
 
                 table.AddRow(
-                    dotnetVersionStringBuilder.ToString(),
+                    dotnetVersionString,
                     dotNetRuntimeStatus,
                     aspNetCoreRuntimeStatus,
                     sdkStatus,
-                    eolStringBuilder.ToString());
+                    eolString);
 
                 continue;
 
