@@ -49,9 +49,8 @@ if [[ $# -gt 0 && $1 = "installer" ]]; then
 else
     # Check for installed .NET components
     manifest_path="$SNAP_COMMON/snap/manifest.json"
-    manifest_data=$(< "$manifest_path")
 
-    if [[ $(echo "$manifest_data" | "$SNAP"/usr/bin/jq 'length') -eq 0 ]]; then
+    if [[ $("$SNAP"/usr/bin/jq 'length' "$manifest_path") -eq 0 ]]; then
         echo "Looks like you don't yet have a .NET SDK or Runtime installed."
         echo "I am downloading and installing the latest SDK for you to use. It should only be a few moments."
 
