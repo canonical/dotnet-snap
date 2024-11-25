@@ -94,23 +94,19 @@ public class ListCommand : Command
 
                 string ComponentStatus(string key, int majorVersion, bool isEol)
                 {
-                    string status;
-                    var available = _manifestService.Remote.Any(c => c.Name == key && c.MajorVersion == majorVersion);
-
                     if (components.TryGetValue(key, out var component))
                     {
-                        status = $"[bold green]Installed [[{component.Version}]][/]";
-                    }
-                    else
-                    {
-                        status = available
-                            ? isEol
-                                ? "Available"
-                                : "[bold blue]Available[/]"
-                            : "[bold grey]-[/]";
+                        return $"[bold green]Installed [[{component.Version}]][/]";
                     }
 
-                    return status;
+                    var available = _manifestService.Remote.Any(c => c.Name == key && c.MajorVersion == majorVersion);
+
+                    if (!available)
+                    {
+                        return "[grey]-[/]";
+                    }
+
+                    return isEol ? "[grey]Available[/]" : "[bold blue]Available[/]";
                 }
             }
 
