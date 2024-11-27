@@ -76,40 +76,25 @@ public partial class SnapService
         {
             try
             {
-                var snapdResponse = await _httpClient
-                    .GetFromJsonAsync<SnapdResponse>(
-                        requestUri: $"/v2/find?name={Uri.EscapeDataString(snapName)}",
-                        _jsonSerializerOptions, cancellationToken)
-                    .ConfigureAwait(false); 
-                    
-                if (snapdResponse is null)
+                var snapdResponse = await RequestAsync(
+                    requestUri: $"/v2/find?name={Uri.EscapeDataString(snapName)}", 
+                    cancellationToken);
+
+                if (snapdResponse is { StatusCode: HttpStatusCode.OK })
                 {
-                    throw new ApplicationException("Snapd REST API response is null");
-                }
-                
-                if (snapdResponse.StatusCode == HttpStatusCode.OK)
-                {
-                    return snapdResponse.Result.Deserialize<SnapInfo[]>(_jsonSerializerOptions)?.Single() ??
-                           throw new ApplicationException("Snapd REST API result is null");
+                    return snapdResponse.Deserialize<SnapInfo[]>(_jsonSerializerOptions).Single();
                 }
 
-                if (snapdResponse.TryGetError(_jsonSerializerOptions, out var error) &&
-                    snapdResponse.StatusCode == HttpStatusCode.NotFound &&
-                    error.Kind == "snap-not-found")
+                var error = snapdResponse.Deserialize<SnapdError>(_jsonSerializerOptions); 
+                
+                if (error is { Kind: "snap-not-found" })
                 {
                     return null;
                 }
 
-                string errorMessage = 
-                    "Snapd REST API responded with status code " +
-                    $"{(int)snapdResponse.StatusCode} ({snapdResponse.Status})";
-
-                if (error != null)
-                {
-                    errorMessage += ": " + error.Message;    
-                }
-                
-                throw new ApplicationException(errorMessage);
+                throw new ApplicationException(message: $"Snapd REST API responded with status code " +
+                                               $"{(int)snapdResponse.StatusCode} ({snapdResponse.Status}): " + 
+                                               error.Message);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -117,6 +102,15 @@ public partial class SnapService
                     message: $"An unexpected failure occured while requesting information about the snap \"{snapName}\"", 
                     innerException: exception);
             }
+        }
+
+        private async Task<SnapdResponse> RequestAsync(string requestUri, CancellationToken cancellationToken)
+        {
+            var snapdResponse = await _httpClient
+                .GetFromJsonAsync<SnapdResponse>(requestUri, _jsonSerializerOptions, cancellationToken)
+                .ConfigureAwait(false);
+
+            return snapdResponse ?? throw new ApplicationException("Snapd REST API response is null");
         }
 
         public void Dispose()
@@ -130,21 +124,27 @@ public partial class SnapService
             string Status,
             JsonElement Result)
         {
-            public bool TryGetError(
+            public TResult Deserialize<TResult>(JsonSerializerOptions jsonDeserializerOptions)
+            {
+                return Result.Deserialize<TResult>(jsonDeserializerOptions)
+                       ?? throw new ApplicationException("Snapd REST API result is null");
+            }
+            
+            public bool TryGetResultAs<TResult>(
                 JsonSerializerOptions jsonDeserializerOptions,
                 [NotNullWhen(returnValue: true)]
-                out SnapdError? error)
-            {
+                out TResult? result)
+            {   
                 try
                 {
-                    error = Result.Deserialize<SnapdError>(jsonDeserializerOptions);
+                    result = Result.Deserialize<TResult>(jsonDeserializerOptions);
                 }
                 catch
                 {
-                    error = null;
+                    result = default;
                 }
                 
-                return error is not null;
+                return result is not null;
             }
         }
 
