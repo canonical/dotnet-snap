@@ -64,7 +64,6 @@ public class ListCommand : Command
                          .OrderBy(c => c.Key))
             {
                 var endOfLife = majorVersionGroup.First().EndOfLife;
-                var isEndOfLife = endOfLife < DateTime.Now;
                 var isLts = majorVersionGroup.First().IsLts;
                 var dotnetVersionString = $".NET {majorVersionGroup.Key}{(isLts ? " LTS" : "")}";
                 
@@ -80,8 +79,19 @@ public class ListCommand : Command
                     name: Constants.SdkComponentName,
                     majorVersion: majorVersionGroup.Key)
                     .ConfigureAwait(false);
-                var eolString = $"[{(isEndOfLife ? "bold red" : "green")}]{endOfLife:d}[/]";
+                
+                var daysUntilEndOfLife = (endOfLife - DateTime.Now).TotalDays;
+                var eolString = $"[{(daysUntilEndOfLife <= 0d ? "bold red" : "green")}]{endOfLife:d}[/]";
 
+                if (daysUntilEndOfLife is < 30d and > 0d)
+                {
+                    eolString += $" [bold yellow]({daysUntilEndOfLife:N0} days left)[/]";
+                }
+                else if (daysUntilEndOfLife is < 90d and > 0d)
+                {
+                    eolString += $" ({daysUntilEndOfLife:N0} days left)";
+                }
+                
                 table.AddRow(
                     dotnetVersionString,
                     dotNetRuntimeStatus,
