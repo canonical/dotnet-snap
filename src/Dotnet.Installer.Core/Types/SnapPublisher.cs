@@ -19,7 +19,7 @@ public record SnapPublisher(
     string Validation)
 {
     /// <summary>
-    /// <see lanfword="true"/> if <see cref="Validation"/> is <c>"verified"</c>; otherwise <see langword="false"/>
+    /// <see langword="true"/> if <see cref="Validation"/> is <c>"verified"</c>; otherwise <see langword="false"/>
     /// </summary>
     [JsonIgnore]
     public bool IsVerified => Validation.Equals("verified");
