@@ -1,5 +1,4 @@
 ﻿using System.CommandLine;
-using System.Text;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
@@ -11,13 +10,19 @@ public class ListCommand : Command
 {
     private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
+    private readonly ISnapService _snapService;
+    private readonly ILogger _logger;
 
     public ListCommand(
         IFileService fileService,
-        IManifestService manifestService) : base("list", "List installed and available .NET versions")
+        IManifestService manifestService,
+        ISnapService snapService,
+        ILogger logger) : base("list", "List installed and available .NET versions")
     {
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         var includeUnsupportedOption = new Option<bool>(
             name: "--all",
@@ -25,13 +30,22 @@ public class ListCommand : Command
             {
                 IsRequired = false
             };
+        
+        var timeoutOption = new Option<uint>(
+            name: "--timeout",
+            description: "The timeout for requesting the version of a .NET component from the snap store in milliseconds (0 = infinite).),", 
+            getDefaultValue: () => 800)
+        {
+            IsRequired = false,
+        };
 
         AddOption(includeUnsupportedOption);
+        AddOption(timeoutOption);
 
-        this.SetHandler(Handle, includeUnsupportedOption);
+        this.SetHandler(Handle, includeUnsupportedOption, timeoutOption);
     }
 
-    private async Task Handle(bool includeUnsupported)
+    private async Task Handle(bool includeUnsupported, uint timeoutInMilliseconds)
     {
         try
         {
@@ -49,32 +63,24 @@ public class ListCommand : Command
                          .GroupBy(c => c.MajorVersion)
                          .OrderBy(c => c.Key))
             {
-                var components = new Dictionary<string, (bool Installed, DotnetVersion? Version)>();
-
-                var installedComponents = majorVersionGroup.Where(c => c.Installation is not null);
-                foreach (var installedComponent in installedComponents)
-                {
-                    var version = installedComponent.GetDotnetVersion(_manifestService, _fileService);
-                    components[installedComponent.Name] = (Installed: true, Version: version);
-                }
-
                 var endOfLife = majorVersionGroup.First().EndOfLife;
                 var isEndOfLife = endOfLife < DateTime.Now;
                 var isLts = majorVersionGroup.First().IsLts;
-
                 var dotnetVersionString = $".NET {majorVersionGroup.Key}{(isLts ? " LTS" : "")}";
-                var dotNetRuntimeStatus = ComponentStatus(
-                    Constants.DotnetRuntimeComponentName,
-                    majorVersionGroup.Key,
-                    isEndOfLife);
-                var aspNetCoreRuntimeStatus = ComponentStatus(
-                    Constants.AspnetCoreRuntimeComponentName,
-                    majorVersionGroup.Key,
-                    isEndOfLife);
-                var sdkStatus = ComponentStatus(Constants.SdkComponentName,
-                    majorVersionGroup.Key,
-                    isEndOfLife);
-                var eolString = $"[bold {(isEndOfLife ? "red" : "green")}]{endOfLife:d}[/]";
+                
+                var dotNetRuntimeStatus = await ComponentStatus(
+                    name: Constants.DotnetRuntimeComponentName,
+                    majorVersion: majorVersionGroup.Key)
+                    .ConfigureAwait(false);
+                var aspNetCoreRuntimeStatus = await ComponentStatus(
+                    name: Constants.AspnetCoreRuntimeComponentName,
+                    majorVersion: majorVersionGroup.Key)
+                    .ConfigureAwait(false);
+                var sdkStatus = await ComponentStatus(
+                    name: Constants.SdkComponentName,
+                    majorVersion: majorVersionGroup.Key)
+                    .ConfigureAwait(false);
+                var eolString = $"[{(isEndOfLife ? "bold red" : "green")}]{endOfLife:d}[/]";
 
                 table.AddRow(
                     dotnetVersionString,
@@ -82,24 +88,80 @@ public class ListCommand : Command
                     aspNetCoreRuntimeStatus,
                     sdkStatus,
                     eolString);
-
+                
                 continue;
-
-                string ComponentStatus(string key, int majorVersion, bool isEol)
+                
+                async Task<string> ComponentStatus(string name, int majorVersion)
                 {
-                    if (components.TryGetValue(key, out var component))
+                    var component = majorVersionGroup
+                        .FirstOrDefault(c => c.Name == name && c.MajorVersion == majorVersion);
+                    
+                    bool isInstalled = component is { Installation: not null };
+
+                    string status;
+                    
+                    if (component is null)
                     {
-                        return $"[bold green]Installed [[{component.Version}]][/]";
+                        status = "[grey]-";
+                    }
+                    else if (isInstalled)
+                    {
+                        status = "[green][bold]Installed[/]";
+                    }
+                    else // is available for installation
+                    {
+                        status = "[blue][bold]Available[/]";
+                    }
+                    
+                    DotnetVersion? version = await GetComponentVersion(component).ConfigureAwait(false);
+
+                    status += version is null ? "[/]" : $" [[{version}]][/]";
+                    return status;
+                }
+
+                async Task<DotnetVersion?> GetComponentVersion(Component? component)
+                {
+                    if (component is null)
+                    {
+                        return null;
+                    }
+                    
+                    if (component.Installation is not null)
+                    {
+                        return component.GetLocalDotnetVersion(_manifestService, _fileService);
                     }
 
-                    var available = _manifestService.Remote.Any(c => c.Name == key && c.MajorVersion == majorVersion);
-
-                    if (!available)
+                    try
                     {
-                        return "[grey]-[/]";
-                    }
+                        if (timeoutInMilliseconds == 0)
+                        {
+                            return await component.GetRemoteDotnetVersion(_snapService).ConfigureAwait(false);
+                        }
+                        
+                        using var cancellationTokenSource = new CancellationTokenSource();
+                        var queryVersionTask = component.GetRemoteDotnetVersion(
+                            _snapService, 
+                            cancellationTokenSource.Token);
+                        var timeoutTask = Task.Delay(
+                             TimeSpan.FromMilliseconds(timeoutInMilliseconds), 
+                             cancellationTokenSource.Token);
+                        
+                        var completedTask = await Task.WhenAny(queryVersionTask, timeoutTask).ConfigureAwait(false);
+                        _ = cancellationTokenSource.CancelAsync().ConfigureAwait(false);
+                        
+                        if (ReferenceEquals(completedTask, timeoutTask))
+                        {
+                            _logger.LogError($"Querying the version for {component.Key} timed out");
+                            return null;
+                        }
 
-                    return isEol ? "[grey]Available[/]" : "[bold blue]Available[/]";
+                        return queryVersionTask.Result;
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.LogError($"Failed to query version for {component.Key}: {exception.Message}");
+                        return null;
+                    }
                 }
             }
 
