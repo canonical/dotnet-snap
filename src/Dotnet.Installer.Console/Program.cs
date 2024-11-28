@@ -14,6 +14,7 @@ class Program
 {
     private static async Task Main(string[] args)
     {
+#if DEBUG
         var debugEnabled = Environment.GetEnvironmentVariable("DOTNET_INSTALLER_DEBUG")?.Equals("1") ?? false;
         if (debugEnabled)
         {
@@ -25,7 +26,7 @@ class Program
             }
             Log.Debug("Debugger attached");
         }
-
+#endif
         var fileService = new FileService();
         var manifestService = new ManifestService();
         var snapService = new SnapService();
