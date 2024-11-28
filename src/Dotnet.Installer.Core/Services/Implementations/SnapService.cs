@@ -3,7 +3,7 @@ using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Services.Implementations;
 
-public class SnapService : ISnapService
+public partial class SnapService : ISnapService
 {
     public bool IsSnapInstalled(string name, CancellationToken cancellationToken = default)
     {
@@ -26,5 +26,16 @@ public class SnapService : ISnapService
         arguments.Add(name);
 
         return Terminal.Invoke("snap", arguments.ToArray());
+    }
+
+    public Task<SnapInfo?> Find(string name, CancellationToken cancellationToken = default)
+    {
+        var snapdRestClient = GetSnapdRestClient();
+        return snapdRestClient.FindSnapAsync(name, cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        _snapdRestClient?.Dispose();
     }
 }

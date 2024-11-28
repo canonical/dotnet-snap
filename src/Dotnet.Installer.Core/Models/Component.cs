@@ -222,9 +222,35 @@ public class Component
         logger?.LogDebug("Removed empty directories.");
     }
 
-    public DotnetVersion GetDotnetVersion(IManifestService manifestService, IFileService fileService)
+    public async Task<DotnetVersion> GetRemoteDotnetVersion(
+        ISnapService snapService, 
+        CancellationToken cancellationToken = default)
+    {
+        var snapInfo = await snapService
+            .Find(Key, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (snapInfo is null)
+        {
+            throw new ApplicationException(message: $"Could not find snap info for {Key}");
+        }
+
+        try
+        {
+            return DotnetVersion.Parse(snapInfo.Version.Split("+git")[0]);
+        }
+        catch (Exception exception)
+        {
+            throw new ApplicationException(
+                message: $"Could not parse Dotnet version ({snapInfo.Version}) from {Key}", 
+                innerException: exception);    
+        }
+    }
+
+    public DotnetVersion GetLocalDotnetVersion(IManifestService manifestService, IFileService fileService)
     {
         if (Installation is null) throw new ApplicationException($"The component {Key} is not installed.");
+        
         var dotnetRoot = "/snap/@@SNAP@@/current/usr/lib/dotnet";
 
         if (Installation.IsRootComponent)
