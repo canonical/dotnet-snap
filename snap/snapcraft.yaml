@@ -47,7 +47,7 @@ parts:
     source: .
     after: [ pre-reqs ]
     build-packages:
-      - dotnet-sdk-8.0
+      - dotnet-sdk-9.0
     stage-packages:
       - jq
     override-build: |
@@ -99,7 +99,7 @@ parts:
     build-packages:
       - patchelf
     stage-packages:
-      - dotnet-hostfxr-8.0
+      - dotnet-hostfxr-9.0
     override-stage: |
       craftctl default
 
@@ -122,7 +122,7 @@ parts:
   netstandard-targeting-pack:
     plugin: nil
     stage-packages:
-      - netstandard-targeting-pack-2.1-8.0
+      - netstandard-targeting-pack-2.1-9.0
 
 apps:
   dotnet:
