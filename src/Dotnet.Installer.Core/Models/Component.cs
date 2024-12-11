@@ -222,48 +222,29 @@ public class Component
         logger?.LogDebug("Removed empty directories.");
     }
 
-    public async Task<DotnetVersion> GetRemoteDotnetVersion(
-        ISnapService snapService, 
+    public async Task<DotnetVersion> GetDotnetVersion(
+        ISnapService snapService,
         CancellationToken cancellationToken = default)
     {
-        var snapInfo = await snapService
-            .Find(Key, cancellationToken)
-            .ConfigureAwait(false);
+        var snapInfo = Installation is null
+            ? await snapService.Find(Key, cancellationToken).ConfigureAwait(false)
+            : await snapService.GetInstalledSnap(Key, cancellationToken).ConfigureAwait(false);
 
         if (snapInfo is null)
         {
-            throw new ApplicationException(message: $"Could not find snap info for {Key}");
+            throw new ApplicationException(message: $"Could not find info for snap {Key}");
         }
 
-        return snapInfo.ParseVersionAsDotnetVersion();
-    }
-
-    public DotnetVersion GetLocalDotnetVersion(IManifestService manifestService, IFileService fileService)
-    {
-        if (!IsInstalled) throw new ApplicationException($"The component {Key} is not installed.");
-        
-        var dotnetRoot = "/snap/@@SNAP@@/current/usr/lib/dotnet";
-
-        if (IsRoot)
+        try
         {
-            dotnetRoot = dotnetRoot.Replace("@@SNAP@@", Key);
+            return DotnetVersion.Parse(snapInfo.Version.Split("+git")[0]);
         }
-        else
+        catch (Exception exception)
         {
-            var rootComponent = manifestService.Local.First(c => c.MajorVersion == MajorVersion && c.IsRoot);
-            dotnetRoot = dotnetRoot.Replace("@@SNAP@@", rootComponent.Key);
+            throw new ApplicationException(
+                message: $"Could not parse .NET version ({snapInfo.Version}) from snap {Key}",
+                innerException: exception);
         }
-
-        return Name switch
-        {
-            Constants.DotnetRuntimeComponentName => fileService.ReadDotVersionFile(
-                dotnetRoot, "shared/Microsoft.NETCore.App", MajorVersion),
-            Constants.AspnetCoreRuntimeComponentName => fileService.ReadDotVersionFile(
-                dotnetRoot, "shared/Microsoft.AspNetCore.App", MajorVersion),
-            Constants.SdkComponentName => fileService.ReadDotVersionFile(
-                dotnetRoot, "sdk", MajorVersion),
-            _ => throw new ApplicationException("Could not read .NET version from .version file.")
-        };
     }
 
     private async Task PlacePathUnits(IFileService fileService, ISystemdService systemdService,
