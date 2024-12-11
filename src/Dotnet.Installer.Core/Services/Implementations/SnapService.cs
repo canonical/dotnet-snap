@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
 
@@ -28,9 +29,51 @@ public partial class SnapService : ISnapService
         return Terminal.Invoke("snap", arguments.ToArray());
     }
 
+    public Task<IImmutableList<SnapInfo>> GetInstalledSnaps(CancellationToken cancellationToken = default)
+    {
+        SnapdRestClient snapdRestClient;
+
+        try
+        {
+            snapdRestClient = GetSnapdRestClient();
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException<IImmutableList<SnapInfo>>(exception);
+        }
+
+        return snapdRestClient.GetInstalledSnapsAsync(cancellationToken);
+    }
+
+    public Task<SnapInfo?> GetInstalledSnap(string name, CancellationToken cancellationToken = default)
+    {
+        SnapdRestClient snapdRestClient;
+
+        try
+        {
+            snapdRestClient = GetSnapdRestClient();
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException<SnapInfo?>(exception);
+        }
+
+        return snapdRestClient.GetInstalledSnapAsync(name, cancellationToken);
+    }
+
     public Task<SnapInfo?> Find(string name, CancellationToken cancellationToken = default)
     {
-        var snapdRestClient = GetSnapdRestClient();
+        SnapdRestClient snapdRestClient;
+
+        try
+        {
+            snapdRestClient = GetSnapdRestClient();
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException<SnapInfo?>(exception);
+        }
+
         return snapdRestClient.FindSnapAsync(name, cancellationToken);
     }
 

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
@@ -57,6 +58,63 @@ public partial class SnapService
             {
                 PropertyNamingPolicy = JsonNamingPolicy.KebabCaseLower,
             };
+        }
+
+        public async Task<IImmutableList<SnapInfo>> GetInstalledSnapsAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var snapdResponse = await RequestAsync(requestUri: "/v2/snaps", cancellationToken);
+
+                if (snapdResponse is { StatusCode: HttpStatusCode.OK })
+                {
+                    return snapdResponse.Deserialize<IImmutableList<SnapInfo>>(_jsonSerializerOptions);
+                }
+
+                var error = snapdResponse.Deserialize<SnapdError>(_jsonSerializerOptions);
+
+                throw new ApplicationException(message: $"Snapd REST API responded with status code " +
+                                                        $"{(int)snapdResponse.StatusCode} ({snapdResponse.Status}): " +
+                                                        error.Message);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                throw new ApplicationException(
+                    message: "An unexpected failure occured while requesting information about the local snaps",
+                    innerException: exception);
+            }
+        }
+
+        public async Task<SnapInfo?> GetInstalledSnapAsync(string snapName, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var snapdResponse = await RequestAsync(
+                    requestUri: $"/v2/snaps/{Uri.EscapeDataString(snapName)}",
+                    cancellationToken);
+
+                if (snapdResponse is { StatusCode: HttpStatusCode.OK })
+                {
+                    return snapdResponse.Deserialize<SnapInfo>(_jsonSerializerOptions);
+                }
+
+                var error = snapdResponse.Deserialize<SnapdError>(_jsonSerializerOptions);
+
+                if (error is { Kind: "snap-not-found" })
+                {
+                    return null;
+                }
+
+                throw new ApplicationException(message: $"Snapd REST API responded with status code " +
+                                                        $"{(int)snapdResponse.StatusCode} ({snapdResponse.Status}): " +
+                                                        error.Message);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                throw new ApplicationException(
+                    message: $"An unexpected failure occured while requesting information about the local snap \"{snapName}\"",
+                    innerException: exception);
+            }
         }
 
         /// <summary>
