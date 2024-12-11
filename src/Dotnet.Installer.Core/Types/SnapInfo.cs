@@ -12,6 +12,6 @@ namespace Dotnet.Installer.Core.Types;
 public record SnapInfo(
     string Name,
     string Version,
-    int Revision,
+    string Revision,
     string Channel,
     SnapPublisher Publisher);
