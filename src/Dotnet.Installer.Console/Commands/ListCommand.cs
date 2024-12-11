@@ -33,7 +33,8 @@ public class ListCommand : Command
         
         var timeoutOption = new Option<uint>(
             name: "--timeout",
-            description: "The timeout for requesting the version of a .NET component from the snap store in milliseconds (0 = infinite).),", 
+            description: "The timeout for requesting the version of a .NET component " +
+                         "from the snap store in milliseconds (0 = infinite).",
             getDefaultValue: () => 5000)
         {
             IsRequired = false,
