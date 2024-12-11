@@ -214,7 +214,7 @@ public class ComponentTests
             systemDService.Object);
 
         // Assert
-        Assert.Null(component1.Installation);
+        Assert.False(component1.IsInstalled);
         Assert.Empty(installedComponents);
     }
 }

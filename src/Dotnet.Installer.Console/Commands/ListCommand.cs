@@ -1,5 +1,5 @@
-﻿using System.CommandLine;
-using System.Text;
+﻿using System.Collections.Immutable;
+using System.CommandLine;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 using Dotnet.Installer.Core.Types;
@@ -11,13 +11,19 @@ public class ListCommand : Command
 {
     private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
+    private readonly ISnapService _snapService;
+    private readonly ILogger _logger;
 
     public ListCommand(
         IFileService fileService,
-        IManifestService manifestService) : base("list", "List installed and available .NET versions")
+        IManifestService manifestService,
+        ISnapService snapService,
+        ILogger logger) : base("list", "List installed and available .NET versions")
     {
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
+        _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         var includeUnsupportedOption = new Option<bool>(
             name: "--all",
@@ -25,13 +31,23 @@ public class ListCommand : Command
             {
                 IsRequired = false
             };
+        
+        var timeoutOption = new Option<uint>(
+            name: "--timeout",
+            description: "The timeout for requesting the version of a .NET component " +
+                         "from the snap store in milliseconds (0 = infinite).",
+            getDefaultValue: () => 5000)
+        {
+            IsRequired = false,
+        };
 
         AddOption(includeUnsupportedOption);
+        AddOption(timeoutOption);
 
-        this.SetHandler(Handle, includeUnsupportedOption);
+        this.SetHandler(Handle, includeUnsupportedOption, timeoutOption);
     }
 
-    private async Task Handle(bool includeUnsupported)
+    private async Task Handle(bool includeUnsupported, uint timeoutInMilliseconds)
     {
         try
         {
@@ -45,61 +61,67 @@ public class ListCommand : Command
             table.AddColumn(new TableColumn("SDK"));
             table.AddColumn(new TableColumn("End of Life"));
 
-            foreach (var majorVersionGroup in _manifestService.Merged
-                         .GroupBy(c => c.MajorVersion)
-                         .OrderBy(c => c.Key))
-            {
-                var components = new Dictionary<string, (bool Installed, DotnetVersion? Version)>();
+            var components = _manifestService.Merged.ToList();
+            var componentVersions = await GetComponentVersions(components, timeoutInMilliseconds).ConfigureAwait(false);
 
-                var installedComponents = majorVersionGroup.Where(c => c.Installation is not null);
-                foreach (var installedComponent in installedComponents)
+            foreach (var majorVersionGroup in components
+                         .GroupBy(c => c.MajorVersion)
+                         .OrderByDescending(c => c.Key))
+            {
+                table.AddRow(
+                    VersionGroupDisplayName(),
+                    ComponentStatus(Constants.DotnetRuntimeComponentName),
+                    ComponentStatus(Constants.AspnetCoreRuntimeComponentName),
+                    ComponentStatus(Constants.SdkComponentName),
+                    EndOfLifeStatus());
+
+                string VersionGroupDisplayName()
                 {
-                    var version = installedComponent.GetDotnetVersion(_manifestService, _fileService);
-                    components[installedComponent.Name] = (Installed: true, Version: version);
+                    var isLts = majorVersionGroup.First().IsLts;
+                    return $".NET {majorVersionGroup.Key}{(isLts ? " LTS" : "")}";
                 }
 
-                var endOfLife = majorVersionGroup.First().EndOfLife;
-                var isEndOfLife = endOfLife < DateTime.Now;
-                var isLts = majorVersionGroup.First().IsLts;
-
-                var dotnetVersionString = $".NET {majorVersionGroup.Key}{(isLts ? " LTS" : "")}";
-                var dotNetRuntimeStatus = ComponentStatus(
-                    Constants.DotnetRuntimeComponentName,
-                    majorVersionGroup.Key,
-                    isEndOfLife);
-                var aspNetCoreRuntimeStatus = ComponentStatus(
-                    Constants.AspnetCoreRuntimeComponentName,
-                    majorVersionGroup.Key,
-                    isEndOfLife);
-                var sdkStatus = ComponentStatus(Constants.SdkComponentName,
-                    majorVersionGroup.Key,
-                    isEndOfLife);
-                var eolString = $"[bold {(isEndOfLife ? "red" : "green")}]{endOfLife:d}[/]";
-
-                table.AddRow(
-                    dotnetVersionString,
-                    dotNetRuntimeStatus,
-                    aspNetCoreRuntimeStatus,
-                    sdkStatus,
-                    eolString);
-
-                continue;
-
-                string ComponentStatus(string key, int majorVersion, bool isEol)
+                string ComponentStatus(string name)
                 {
-                    if (components.TryGetValue(key, out var component))
-                    {
-                        return $"[bold green]Installed [[{component.Version}]][/]";
-                    }
+                    var component = majorVersionGroup.FirstOrDefault(
+                        c => c.Name == name && c.MajorVersion == majorVersionGroup.Key);
 
-                    var available = _manifestService.Remote.Any(c => c.Name == key && c.MajorVersion == majorVersion);
-
-                    if (!available)
+                    if (component is null)
                     {
                         return "[grey]-[/]";
                     }
 
-                    return isEol ? "[grey]Available[/]" : "[bold blue]Available[/]";
+                    string status = component.IsInstalled ? "[green][bold]Installed[/]" : "[blue][bold]Available[/]";
+
+                    if (component is { IsInstalled: true, IsRoot: false })
+                    {
+                        var rootComponent = majorVersionGroup.Single(c => c.IsRoot);
+                        status += $" (with {rootComponent.Name})";
+                    }
+
+                    var version = componentVersions[component.Key];
+                    status += version is null ? "[/]" : $" [[{version}]][/]";
+
+                    return status;
+                }
+
+                string EndOfLifeStatus()
+                {
+                    var endOfLife = majorVersionGroup.First().EndOfLife;
+                    var daysUntilEndOfLife = (endOfLife - DateTime.Now).TotalDays;
+
+                    var eolString = $"[{(daysUntilEndOfLife <= 0d ? "bold red" : "green")}]{endOfLife:d}[/]";
+
+                    if (majorVersionGroup.Any(c => c.IsInstalled) && daysUntilEndOfLife is < 30d and > 0d)
+                    {
+                        eolString += $" [bold yellow]({daysUntilEndOfLife:N0} days left)[/]";
+                    }
+                    else if (daysUntilEndOfLife is < 90d and > 0d)
+                    {
+                        eolString += $" ({daysUntilEndOfLife:N0} days left)";
+                    }
+
+                    return eolString;
                 }
             }
 
@@ -109,6 +131,183 @@ public class ListCommand : Command
         {
             Log.Error(ex.Message);
             Environment.Exit(-1);
+        }
+    }
+
+    private async Task<Dictionary<string, DotnetVersion?>> GetComponentVersions(
+        List<Component> components,
+        uint timeoutInMilliseconds)
+    {
+        var componentVersions = new Dictionary<string, DotnetVersion?>();
+        if (components.Count == 0) return componentVersions;
+
+        // thread safety of adding a key to a dictionary is questionable, therefore we pre-populate all keys
+        foreach (var component in components)
+        {
+            componentVersions.Add(component.Key, null);
+        }
+
+        Task? timeoutTask = null;
+        var cancellationTokenSource = new CancellationTokenSource();
+        var timeout = false;
+        var anyFailure = false;
+
+        var tasks = new List<Task>
+        {
+            GetInstalledRootComponentsVersions(cancellationTokenSource.Token),
+            GetUninstalledComponentsVersions(cancellationTokenSource.Token),
+            GetInstalledNonRootComponentsVersions(cancellationTokenSource.Token),
+        };
+
+        int timeoutTaskCount = 0;
+
+        if (timeoutInMilliseconds > 0)
+        {
+            timeoutTask = Task.Delay(TimeSpan.FromMilliseconds(timeoutInMilliseconds), cancellationTokenSource.Token);
+            tasks.Add(timeoutTask);
+            timeoutTaskCount = 1;
+        }
+
+        while (tasks.Count > timeoutTaskCount) // ensures that we do not wait for the timeout task
+        {
+            var finishedTask = await Task.WhenAny(tasks).ConfigureAwait(false);
+            tasks.Remove(finishedTask);
+
+            if (ReferenceEquals(finishedTask, timeoutTask))
+            {
+                timeout = true;
+                break;
+            }
+        }
+
+        await cancellationTokenSource.CancelAsync().ConfigureAwait(false);
+
+        if (timeout)
+        {
+            _logger.LogError("Requesting the version numbers for some components timed out. You can increase the " +
+                             "timeout time with the --timeout flag.");
+            _logger.LogDebug($"Unfinished tasks: {tasks.Count}");
+        }
+        else if (anyFailure)
+        {
+            _logger.LogError("The version numbers of some components can not be displayed due to unexpected " +
+                             "failures. Run this command with --verbose to show more detailed error messages.");
+        }
+
+        return componentVersions;
+
+        async Task GetInstalledRootComponentsVersions(CancellationToken cancellationToken = default)
+        {
+            var installedRootComponents = components.Where(c => c.IsRoot);
+            // ReSharper disable once PossibleMultipleEnumeration
+            // The underlying list is not long. Therefore, the re-enumeration is cheaper than creating a new list/array.
+            if (!installedRootComponents.Any()) return;
+
+            IImmutableList<SnapInfo> installedSnaps;
+
+            try
+            {
+                installedSnaps = await _snapService.GetInstalledSnaps(cancellationToken).ConfigureAwait(false);
+            }
+            catch (ApplicationException exception)
+            {
+                anyFailure = true;
+                _logger.LogDebug(exception.Message);
+                return;
+            }
+
+            // ReSharper disable once PossibleMultipleEnumeration (see reasoning above)
+            foreach (var component in installedRootComponents)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                SnapInfo installedSnap;
+
+                try
+                {
+                    installedSnap = installedSnaps.Single(snap => snap.Name == component.Key);
+                }
+                catch (InvalidOperationException)
+                {
+                    anyFailure = true;
+                    _logger.LogDebug($"Could not find installed component {component.Key}");
+                    continue;
+                }
+
+                try
+                {
+                    componentVersions[component.Key] = installedSnap.ParseVersionAsDotnetVersion();
+                }
+                catch (ApplicationException exception)
+                {
+                    anyFailure = true;
+                    _logger.LogDebug(exception.Message);
+                }
+            }
+        }
+
+        async Task GetInstalledNonRootComponentsVersions(CancellationToken cancellationToken = default)
+        {
+            // ensures that this action will be run asynchronously
+            await Task.Yield();
+
+            foreach (var component in components.Where(c => c is { IsRoot: false, IsInstalled: true }))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    var version = component.GetDotnetVersion(_manifestService, _fileService);
+                    componentVersions[component.Key] = version;
+                }
+                catch (ApplicationException exception)
+                {
+                    anyFailure = true;
+                    _logger.LogDebug(exception.Message);
+                }
+            }
+        }
+
+        Task GetUninstalledComponentsVersions(CancellationToken cancellationToken = default)
+        {
+            return Parallel.ForEachAsync(
+                components.Where(c => !c.IsInstalled),
+                cancellationToken,
+                GetUninstalledComponentVersion);
+        }
+
+        async ValueTask GetUninstalledComponentVersion(Component component, CancellationToken cancellationToken = default)
+        {
+            SnapInfo? snap;
+
+            try
+            {
+                snap = await _snapService.FindSnap(component.Key, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ApplicationException exception)
+            {
+                anyFailure = true;
+                _logger.LogDebug(exception.Message);
+                return;
+            }
+
+            if (snap is null)
+            {
+                anyFailure = true;
+                _logger.LogDebug($"Could not find a snap with the name {component.Key}");
+                return;
+            }
+
+            try
+            {
+                var version = snap.ParseVersionAsDotnetVersion();
+                componentVersions[component.Key] = version;
+            }
+            catch (ApplicationException exception)
+            {
+                anyFailure = true;
+                _logger.LogDebug(exception.Message);
+            }
         }
     }
 }
