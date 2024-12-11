@@ -106,8 +106,6 @@ public class ListCommand : Command
                 {
                     var component = majorVersionGroup
                         .FirstOrDefault(c => c.Name == name && c.MajorVersion == majorVersion);
-                    
-                    bool isInstalled = component is { Installation: not null };
 
                     string status;
                     
@@ -115,7 +113,7 @@ public class ListCommand : Command
                     {
                         status = "[grey]-";
                     }
-                    else if (isInstalled)
+                    else if (component.IsInstalled)
                     {
                         status = "[green][bold]Installed[/]";
                     }
@@ -137,7 +135,7 @@ public class ListCommand : Command
                         return null;
                     }
                     
-                    if (component.Installation is not null)
+                    if (component.IsInstalled)
                     {
                         return component.GetLocalDotnetVersion(_manifestService, _fileService);
                     }
