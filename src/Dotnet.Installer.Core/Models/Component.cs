@@ -227,7 +227,7 @@ public class Component
         CancellationToken cancellationToken = default)
     {
         var snapInfo = Installation is null
-            ? await snapService.Find(Key, cancellationToken).ConfigureAwait(false)
+            ? await snapService.FindSnap(Key, cancellationToken).ConfigureAwait(false)
             : await snapService.GetInstalledSnap(Key, cancellationToken).ConfigureAwait(false);
 
         if (snapInfo is null)

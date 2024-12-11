@@ -275,7 +275,7 @@ public class ListCommand : Command
 
             foreach (var componentName in uninstalledComponents)
             {
-                tasks.Add((SnapName: componentName, GetSnapInfoTask: _snapService.Find(componentName, cancellationToken)));
+                tasks.Add((SnapName: componentName, GetSnapInfoTask: _snapService.FindSnap(componentName, cancellationToken)));
             }
 
             var result = new List<(string Name, DotnetVersion? Version)>();

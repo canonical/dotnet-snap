@@ -61,7 +61,7 @@ public partial class SnapService : ISnapService
         return snapdRestClient.GetInstalledSnapAsync(name, cancellationToken);
     }
 
-    public Task<SnapInfo?> Find(string name, CancellationToken cancellationToken = default)
+    public Task<SnapInfo?> FindSnap(string name, CancellationToken cancellationToken = default)
     {
         SnapdRestClient snapdRestClient;
 
