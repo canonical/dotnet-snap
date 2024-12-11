@@ -9,15 +9,18 @@ namespace Dotnet.Installer.Console.Commands;
 
 public class ListCommand : Command
 {
+    private readonly IFileService _fileService;
     private readonly IManifestService _manifestService;
     private readonly ISnapService _snapService;
     private readonly ILogger _logger;
 
     public ListCommand(
+        IFileService fileService,
         IManifestService manifestService,
         ISnapService snapService,
         ILogger logger) : base("list", "List installed and available .NET versions")
     {
+        _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _manifestService = manifestService ?? throw new ArgumentNullException(nameof(manifestService));
         _snapService = snapService ?? throw new ArgumentNullException(nameof(snapService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -59,24 +62,7 @@ public class ListCommand : Command
             table.AddColumn(new TableColumn("End of Life"));
 
             var components = _manifestService.Merged.ToList();
-            Dictionary<string, DotnetVersion?> componentVersions;
-
-            try
-            {
-                componentVersions = await GetComponentVersions(components, timeoutInMilliseconds).ConfigureAwait(false);
-
-                if (componentVersions.Any(x => x.Value == null
-                        && components.First(c => c.Key == x.Key) is not { Installation.IsRootComponent: false }))
-                {
-                    _logger.LogError("The version numbers of some components can not be displayed due to unexpected " +
-                                     "failures. Run this command with --verbose to show more detailed error messages");
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogError("Requesting the version numbers for the components from snapd timed out");
-                componentVersions = components.ToDictionary(c => c.Key, _ => (DotnetVersion?)null);
-            }
+            var componentVersions = await GetComponentVersions(components, timeoutInMilliseconds).ConfigureAwait(false);
 
             foreach (var majorVersionGroup in components
                          .GroupBy(c => c.MajorVersion)
@@ -107,16 +93,14 @@ public class ListCommand : Command
 
                     string status = component.IsInstalled ? "[green][bold]Installed[/]" : "[blue][bold]Available[/]";
 
-                    if (!component.IsInstalled || component.IsRoot)
+                    if (component is { IsInstalled: true, IsRoot: false })
                     {
-                        var version = componentVersions[component.Key];
-                        status += version is null ? "[/]" : $" [[{version}]][/]";
+                        var rootComponent = majorVersionGroup.Single(c => c.IsRoot);
+                        status += $" (with {rootComponent.Name})";
                     }
-                    else
-                    {
-                        var rootComponent = majorVersionGroup.Single(c => c is { Installation.IsRootComponent: true });
-                        status += $" (with {rootComponent.Name})[/]";
-                    }
+
+                    var version = componentVersions[component.Key];
+                    status += version is null ? "[/]" : $" [[{version}]][/]";
 
                     return status;
                 }
@@ -154,78 +138,70 @@ public class ListCommand : Command
         List<Component> components,
         uint timeoutInMilliseconds)
     {
-        if (timeoutInMilliseconds == 0u)
-        {
-            return await GetComponentVersions(components).ConfigureAwait(false);
-        }
-
-        // The following madness (letting two tasks race condition against each other) is more precise than
-        // using cancellationTokenSource.CancelAfter(...). For some reason (that is not worth investigating)
-        // the snapd HttpRequest does not immediately abort reliably if the token is canceled.
-        using var cancellationTokenSource = new CancellationTokenSource();
-
-        var queryVersionsTask = GetComponentVersions(
-            components,
-            cancellationTokenSource.Token);
-        var timeoutTask = Task.Delay(
-            delay: TimeSpan.FromMilliseconds(timeoutInMilliseconds),
-            cancellationTokenSource.Token);
-
-        var completedTask = await Task.WhenAny(queryVersionsTask, timeoutTask).ConfigureAwait(false);
-        _ = cancellationTokenSource.CancelAsync().ConfigureAwait(false);
-
-        if (ReferenceEquals(completedTask, timeoutTask))
-        {
-            throw new OperationCanceledException("The component version query timed out");
-        }
-
-        return queryVersionsTask.Result;
-    }
-
-    private async Task<Dictionary<string, DotnetVersion?>> GetComponentVersions(
-        List<Component> components,
-        CancellationToken cancellationToken = default)
-    {
         var componentVersions = new Dictionary<string, DotnetVersion?>();
+        if (components.Count == 0) return componentVersions;
 
-        var installedComponents = new List<string>();
-        var uninstalledComponents = new List<string>();
-
+        // thread safety of adding a key to a dictionary is questionable, therefore we pre-populate all keys
         foreach (var component in components)
         {
-            if (!component.IsInstalled)
+            componentVersions.Add(component.Key, null);
+        }
+
+        Task? timeoutTask = null;
+        var cancellationTokenSource = new CancellationTokenSource();
+        var timeout = false;
+        var anyFailure = false;
+
+        var tasks = new List<Task>
+        {
+            GetInstalledRootComponentsVersions(cancellationTokenSource.Token),
+            GetUninstalledComponentsVersions(cancellationTokenSource.Token),
+            GetInstalledNonRootComponentsVersions(cancellationTokenSource.Token),
+        };
+
+        int timeoutTaskCount = 0;
+
+        if (timeoutInMilliseconds > 0)
+        {
+            timeoutTask = Task.Delay(TimeSpan.FromMilliseconds(timeoutInMilliseconds), cancellationTokenSource.Token);
+            tasks.Add(timeoutTask);
+            timeoutTaskCount = 1;
+        }
+
+        while (tasks.Count > timeoutTaskCount) // ensures that we do not wait for the timeout task
+        {
+            var finishedTask = await Task.WhenAny(tasks).ConfigureAwait(false);
+            tasks.Remove(finishedTask);
+
+            if (ReferenceEquals(finishedTask, timeoutTask))
             {
-                uninstalledComponents.Add(component.Key);
-            }
-            else if (component.IsRoot)
-            {
-                installedComponents.Add(component.Key);
-            }
-            else
-            {
-                //non root-components are installed as part of a root component, therefore we just ignore them here
-                componentVersions.Add(component.Key, null);
+                timeout = true;
+                break;
             }
         }
 
-        var getInstalledComponentsVersionsTask = GetInstalledComponentsVersions();
-        var getUninstalledComponentsVersionsTask = GetUninstalledComponentsVersions();
+        await cancellationTokenSource.CancelAsync().ConfigureAwait(false);
 
-        foreach (var (name, version) in await getInstalledComponentsVersionsTask)
+        if (timeout)
         {
-            componentVersions.Add(name, version);
+            _logger.LogError("Requesting the version numbers for some components timed out. You can increase the " +
+                             "timeout time with the --timeout flag.");
+            _logger.LogDebug($"Unfinished tasks: {tasks.Count}");
         }
-
-        foreach (var (name, version) in await getUninstalledComponentsVersionsTask)
+        else if (anyFailure)
         {
-            componentVersions.Add(name, version);
+            _logger.LogError("The version numbers of some components can not be displayed due to unexpected " +
+                             "failures. Run this command with --verbose to show more detailed error messages.");
         }
 
         return componentVersions;
 
-        async Task<IEnumerable<(string Name, DotnetVersion? Version)>> GetInstalledComponentsVersions()
+        async Task GetInstalledRootComponentsVersions(CancellationToken cancellationToken = default)
         {
-            if (installedComponents.Count == 0) return [];
+            var installedRootComponents = components.Where(c => c.IsRoot);
+            // ReSharper disable once PossibleMultipleEnumeration
+            // The underlying list is not long. Therefore, the re-enumeration is cheaper than creating a new list/array.
+            if (!installedRootComponents.Any()) return;
 
             IImmutableList<SnapInfo> installedSnaps;
 
@@ -235,88 +211,103 @@ public class ListCommand : Command
             }
             catch (ApplicationException exception)
             {
+                anyFailure = true;
                 _logger.LogDebug(exception.Message);
-                return installedComponents.Select(c => (Name: c, Version: (DotnetVersion?)null));
+                return;
             }
 
-            var result = new List<(string Name, DotnetVersion? Version)>();
-
-            foreach (var componentName in installedComponents)
-            {
-                var installedSnap = installedSnaps.SingleOrDefault(snap => snap.Name == componentName);
-
-                if (installedSnap is null)
-                {
-                    _logger.LogDebug($"Could not find installed component {componentName}");
-                    result.Add((componentName, Version: null));
-                    continue;
-                }
-
-                try
-                {
-                    var version = installedSnap.ParseVersionAsDotnetVersion();
-                    result.Add((componentName, version));
-                }
-                catch (ApplicationException exception)
-                {
-                    _logger.LogDebug(exception.Message);
-                    result.Add((componentName, Version: null));
-                }
-            }
-
-            return result;
-        }
-
-        async Task<IEnumerable<(string Name, DotnetVersion? Version)>> GetUninstalledComponentsVersions()
-        {
-            if (uninstalledComponents.Count == 0) return [];
-
-            var tasks = new List<(string SnapName, Task<SnapInfo?> GetSnapInfoTask)>();
-
-            foreach (var componentName in uninstalledComponents)
-            {
-                tasks.Add((SnapName: componentName, GetSnapInfoTask: _snapService.FindSnap(componentName, cancellationToken)));
-            }
-
-            var result = new List<(string Name, DotnetVersion? Version)>();
-
-            foreach ((string snapName, Task<SnapInfo?> getSnapInfoTask) in tasks)
+            // ReSharper disable once PossibleMultipleEnumeration (see reasoning above)
+            foreach (var component in installedRootComponents)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                SnapInfo? snap;
+                SnapInfo installedSnap;
 
                 try
                 {
-                    snap = await getSnapInfoTask.ConfigureAwait(false);
+                    installedSnap = installedSnaps.Single(snap => snap.Name == component.Key);
                 }
-                catch (ApplicationException exception)
+                catch (InvalidOperationException)
                 {
-                    _logger.LogDebug(exception.Message);
-                    result.Add((snapName, Version: null));
-                    continue;
-                }
-
-                if (snap is null)
-                {
-                    _logger.LogDebug($"Could not find a snap with the name {snapName}");
-                    result.Add((snapName, Version: null));
+                    anyFailure = true;
+                    _logger.LogDebug($"Could not find installed component {component.Key}");
                     continue;
                 }
 
                 try
                 {
-                    var version = snap.ParseVersionAsDotnetVersion();
-                    result.Add((snapName, version));
+                    componentVersions[component.Key] = installedSnap.ParseVersionAsDotnetVersion();
                 }
                 catch (ApplicationException exception)
                 {
+                    anyFailure = true;
                     _logger.LogDebug(exception.Message);
-                    result.Add((snapName, Version: null));
                 }
             }
+        }
 
-            return result;
+        async Task GetInstalledNonRootComponentsVersions(CancellationToken cancellationToken = default)
+        {
+            // ensures that this action will be run asynchronously
+            await Task.Yield();
+
+            foreach (var component in components.Where(c => c is { IsRoot: false, IsInstalled: true }))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    var version = component.GetDotnetVersion(_manifestService, _fileService);
+                    componentVersions[component.Key] = version;
+                }
+                catch (ApplicationException exception)
+                {
+                    anyFailure = true;
+                    _logger.LogDebug(exception.Message);
+                }
+            }
+        }
+
+        Task GetUninstalledComponentsVersions(CancellationToken cancellationToken = default)
+        {
+            return Parallel.ForEachAsync(
+                components.Where(c => !c.IsInstalled),
+                cancellationToken,
+                GetUninstalledComponentVersion);
+        }
+
+        async ValueTask GetUninstalledComponentVersion(Component component, CancellationToken cancellationToken = default)
+        {
+            SnapInfo? snap;
+
+            try
+            {
+                snap = await _snapService.FindSnap(component.Key, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ApplicationException exception)
+            {
+                anyFailure = true;
+                _logger.LogDebug(exception.Message);
+                return;
+            }
+
+            if (snap is null)
+            {
+                anyFailure = true;
+                _logger.LogDebug($"Could not find a snap with the name {component.Key}");
+                return;
+            }
+
+            try
+            {
+                var version = snap.ParseVersionAsDotnetVersion();
+                componentVersions[component.Key] = version;
+            }
+            catch (ApplicationException exception)
+            {
+                anyFailure = true;
+                _logger.LogDebug(exception.Message);
+            }
         }
     }
 }

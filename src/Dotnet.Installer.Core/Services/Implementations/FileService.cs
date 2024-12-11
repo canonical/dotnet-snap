@@ -100,6 +100,40 @@ public class FileService : IFileService
     }
 
     /// <summary>
+    /// Reads a .version file and returns the .NET version in it.
+    /// </summary>
+    /// <param name="dotNetRoot">The root of the .NET directory hive.</param>
+    /// <param name="componentPath">The relative path to the .NET shared component,
+    /// e.g. <c>shared/Microsoft.NETCore.App</c>, <c>shared/Microsoft.AspNetCore.App</c> or <c>sdk</c>.</param>
+    /// <param name="majorVersion">The .NET major version of the component being analyzed.</param>
+    /// <returns>The .NET version in the .version file.</returns>
+    public DotnetVersion ReadDotVersionFile(string dotNetRoot, string componentPath, int majorVersion)
+    {
+        var location = Path.Join(dotNetRoot, componentPath);
+        foreach (var directory in Directory.EnumerateDirectories(location))
+        {
+            if (directory.Split(Path.DirectorySeparatorChar).Last().StartsWith(majorVersion.ToString()))
+            {
+                location = Path.Join(directory, ".version");
+                break;
+            }
+        }
+
+        // Search files matching the pattern
+        if (File.Exists(location))
+        {
+            var lines = File.ReadAllLines(location);
+            // Ensure there are enough lines to read the version string
+            if (lines.Length > 1)
+            {
+                return DotnetVersion.Parse(lines[1]);
+            }
+        }
+
+        throw new FileNotFoundException($".version file not found at {location}");
+    }
+
+    /// <summary>
     /// Iterates recursively through all the directories within <c>root</c> and deletes any empty directories found.
     /// <c>root</c> will NOT be deleted even if it ends up being an empty directory itself.
     /// </summary>

@@ -35,7 +35,7 @@ class Program
         var rootCommand = new RootCommand(".NET Installer command-line tool")
         {
             new EnvironmentCommand(fileService, manifestService, systemDService, logger),
-            new ListCommand(manifestService, snapService, logger),
+            new ListCommand(fileService, manifestService, snapService, logger),
             new InstallCommand(fileService, manifestService, snapService, systemDService, logger),
             new RemoveCommand(fileService, manifestService, snapService, systemDService, logger)
         };
