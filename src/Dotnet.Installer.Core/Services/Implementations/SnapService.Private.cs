@@ -14,14 +14,14 @@ public partial class SnapService
 
     private SnapdRestClient GetSnapdRestClient()
     {
-        if (_snapdRestClient == null)
+        if (_snapdRestClient is null)
         {
             _snapdRestClient = new SnapdRestClient();
         }
         
         return _snapdRestClient;
     }
-    
+
     /// <summary>
     /// HTTP client that interacts with the local snapd REST API via a Unix socket.  
     /// </summary>
@@ -164,6 +164,8 @@ public partial class SnapService
 
         private async Task<SnapdResponse> RequestAsync(string requestUri, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var snapdResponse = await _httpClient
                 .GetFromJsonAsync<SnapdResponse>(requestUri, _jsonSerializerOptions, cancellationToken)
                 .ConfigureAwait(false);
