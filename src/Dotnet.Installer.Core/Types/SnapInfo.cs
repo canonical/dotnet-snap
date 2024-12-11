@@ -14,4 +14,19 @@ public record SnapInfo(
     string Version,
     string Revision,
     string Channel,
-    SnapPublisher Publisher);
+    SnapPublisher Publisher)
+{
+    public DotnetVersion ParseVersionAsDotnetVersion()
+    {
+        try
+        {
+            return DotnetVersion.Parse(Version.Split("+git")[0]);
+        }
+        catch (Exception exception)
+        {
+            throw new ApplicationException(
+                message: $"Could not parse .NET version ({Version}) from snap {Name}",
+                innerException: exception);
+        }
+    }
+}

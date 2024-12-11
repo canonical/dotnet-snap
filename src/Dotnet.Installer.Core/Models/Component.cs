@@ -235,16 +235,7 @@ public class Component
             throw new ApplicationException(message: $"Could not find snap info for {Key}");
         }
 
-        try
-        {
-            return DotnetVersion.Parse(snapInfo.Version.Split("+git")[0]);
-        }
-        catch (Exception exception)
-        {
-            throw new ApplicationException(
-                message: $"Could not parse Dotnet version ({snapInfo.Version}) from {Key}", 
-                innerException: exception);    
-        }
+        return snapInfo.ParseVersionAsDotnetVersion();
     }
 
     public DotnetVersion GetLocalDotnetVersion(IManifestService manifestService, IFileService fileService)
