@@ -24,6 +24,13 @@ find /usr/lib/systemd/system/ -type f -name 'dotnet-*-update-watcher.*' | while 
     rm "$file"
 done
 
+find /usr/lib/systemd/system/ -type f -name 'aspnetcore-*-update-watcher.*' | while read -r file; do
+    unit_name=$(echo "$file" | rev | cut -d / -f 1 | rev)
+    systemctl stop "$unit_name"
+    systemctl disable "$unit_name"
+    rm "$file"
+done
+
 systemctl daemon-reload
 
 ##################################
