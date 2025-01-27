@@ -55,12 +55,11 @@ public partial class ManifestService : IManifestService
         return Refresh(cancellationToken);
     }
 
-    public async Task Add(Component component, bool isRootComponent, CancellationToken cancellationToken = default)
+    public async Task Add(Component component, CancellationToken cancellationToken = default)
     {
         component.Installation = new Installation
         {
-            InstalledAt = DateTimeOffset.UtcNow,
-            IsRootComponent = isRootComponent
+            InstalledAt = DateTimeOffset.UtcNow
         };
         _local.Add(component);
         await Save(cancellationToken);

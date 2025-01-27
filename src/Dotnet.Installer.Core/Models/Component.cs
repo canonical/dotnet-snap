@@ -2,7 +2,6 @@
 using System.Text.Json.Serialization;
 using Dotnet.Installer.Core.Models.Events;
 using Dotnet.Installer.Core.Services.Contracts;
-using Dotnet.Installer.Core.Types;
 
 namespace Dotnet.Installer.Core.Models;
 
@@ -18,13 +17,12 @@ public class Component
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
     public bool IsInstalled => Installation is not null;
-    public bool IsRoot => Installation is { IsRootComponent: true };
 
     public event EventHandler<InstallationStartedEventArgs>? InstallationStarted;
     public event EventHandler<InstallationFinishedEventArgs>? InstallationFinished;
 
     public async Task Install(IFileService fileService, IManifestService manifestService, ISnapService snapService,
-        ISystemdService systemdService, bool isRootComponent, ILogger? logger = default)
+        ISystemdService systemdService, ILogger? logger = null)
     {
         if (IsInstalled)
         {
@@ -34,47 +32,29 @@ public class Component
 
         InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
 
-        if (isRootComponent)
+        // Install content snap on the machine
+        if (!snapService.IsSnapInstalled(Key))
         {
-            if (!CanInstall(manifestService, out var componentKeyToRemove))
-            {
-                logger?.LogInformation($"The {Description} is already installed.");
-                return;
-            }
-
-            if (componentKeyToRemove is not null)
-            {
-                logger?.LogDebug($"Removing component {componentKeyToRemove} before installing {Key}.");
-                var componentToRemove = manifestService.Local.First(x => x.Key == componentKeyToRemove);
-                await componentToRemove.Uninstall(fileService, manifestService, snapService, systemdService,
-                    logger);
-            }
-
-            // Install content snap on the machine
-            if (!snapService.IsSnapInstalled(Key))
-            {
-                var result = await snapService.Install(Key);
-                if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
-            }
-
-            // Place linking file in the content snap's $SNAP_COMMON
-            await fileService.PlaceLinkageFile(Key);
-
-            // Install Systemd mount units
-            await PlaceMountUnits(fileService, manifestService, systemdService, logger);
-
-            // Install update watcher unit
-            await PlacePathUnits(fileService, systemdService, logger);
+            var result = await snapService.Install(Key, edge: true); // TODO: Remove 'edge' flag from here
+            if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
         }
 
+        // Place linking file in the content snap's $SNAP_COMMON
+        await fileService.PlaceLinkageFile(Key);
+
+        // Install Systemd mount units
+        await PlaceMountUnits(fileService, manifestService, systemdService, logger);
+
+        // Install update watcher unit
+        await PlacePathUnits(fileService, systemdService, logger);
+
         // Register the installation of this component in the local manifest file
-        await manifestService.Add(this, isRootComponent);
+        await manifestService.Add(this);
 
         foreach (var dependency in Dependencies)
         {
             var component = manifestService.Remote.First(c => c.Key == dependency);
-            await component.Install(fileService, manifestService, snapService, systemdService,
-                isRootComponent: false, logger);
+            await component.Install(fileService, manifestService, snapService, systemdService, logger);
         }
 
         InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
@@ -85,39 +65,19 @@ public class Component
     {
         if (IsInstalled)
         {
-            if (IsRoot)
+            // Uninstall systemd mount units
+            await RemoveMountUnits(fileService, manifestService, systemdService, logger);
+
+            // Uninstall systemd path units
+            await RemovePathUnits(fileService, systemdService, logger);
+
+            if (snapService.IsSnapInstalled(Key))
             {
-                // Uninstall systemd mount units
-                await RemoveMountUnits(fileService, manifestService, systemdService, logger);
-
-                // Uninstall systemd path units
-                await RemovePathUnits(fileService, systemdService, logger);
-
-                if (snapService.IsSnapInstalled(Key))
-                {
-                    await snapService.Remove(Key, purge: true);
-                }
-            }
-            else
-            {
-                var rootComponent = manifestService.Local.FirstOrDefault(c => c.MajorVersion == MajorVersion && c.IsRoot);
-
-                if (rootComponent is not null)
-                {
-                    throw new ApplicationException(
-                        $"The {Description} has been installed through the {rootComponent.Description}, " +
-                        $"please uninstall the {rootComponent.Name} component instead.");
-                }
+                await snapService.Remove(Key, purge: true);
             }
 
             Installation = null;
             await manifestService.Remove(this);
-
-            foreach (var dependency in Dependencies)
-            {
-                var component = manifestService.Local.First(c => c.Key == dependency);
-                await component.Uninstall(fileService, manifestService, snapService, systemdService, logger);
-            }
         }
     }
 
@@ -222,36 +182,7 @@ public class Component
         logger?.LogDebug("Removed empty directories.");
     }
 
-    public DotnetVersion GetDotnetVersion(IManifestService manifestService, IFileService fileService)
-    {
-        if (!IsInstalled) throw new ApplicationException($"The component {Key} is not installed.");
-
-        var dotnetRoot = "/snap/@@SNAP@@/current/usr/lib/dotnet";
-
-        if (IsRoot)
-        {
-            dotnetRoot = dotnetRoot.Replace("@@SNAP@@", Key);
-        }
-        else
-        {
-            var rootComponent = manifestService.Local.First(c => c.MajorVersion == MajorVersion && c.IsRoot);
-            dotnetRoot = dotnetRoot.Replace("@@SNAP@@", rootComponent.Key);
-        }
-
-        return Name switch
-        {
-            Constants.DotnetRuntimeComponentName => fileService.ReadDotVersionFile(
-                dotnetRoot, "shared/Microsoft.NETCore.App", MajorVersion),
-            Constants.AspnetCoreRuntimeComponentName => fileService.ReadDotVersionFile(
-                dotnetRoot, "shared/Microsoft.AspNetCore.App", MajorVersion),
-            Constants.SdkComponentName => fileService.ReadDotVersionFile(
-                dotnetRoot, "sdk", MajorVersion),
-            _ => throw new ApplicationException("Could not read .NET version from .version file.")
-        };
-    }
-
-    private async Task PlacePathUnits(IFileService fileService, ISystemdService systemdService,
-        ILogger? logger = default)
+    private async Task PlacePathUnits(IFileService fileService, ISystemdService systemdService, ILogger? logger = null)
     {
         fileService.InstallSystemdPathUnit(Key);
         logger?.LogDebug($"Placed upgrade watcher path and service units for snap {Key}");
@@ -302,70 +233,5 @@ public class Component
         {
             throw new ApplicationException("Could not reload systemd daemon");
         }
-    }
-
-    /// <summary>
-    /// Determines whether a component can be installed based on the components already installed.
-    /// The return value of this function indicates whether this component can be installed or not. It also includes
-    /// a <c>componentKeyToRemove</c> out-parameter that indicates whether a component must be removed before installing
-    /// this component.
-    /// </summary>
-    /// <param name="manifestService">The manifest service.</param>
-    /// <param name="componentKeyToRemove">The key of the component to remove.</param>
-    /// <returns>Whether the current component can be installed.</returns>
-    private bool CanInstall(IManifestService manifestService, out string? componentKeyToRemove)
-    {
-        componentKeyToRemove = null;
-
-        // We will always only have on component per major version installed by design.
-        // So, FirstOrDefault() should either return that one component or none.
-        var installedComponentOfSameMajorVersion = manifestService.Local.FirstOrDefault(
-            c => c.MajorVersion == MajorVersion);
-
-        // We don't have any component of that major version installed.
-        if (installedComponentOfSameMajorVersion is null)
-        {
-            return true;
-        }
-
-        // Get all the dependencies of the installed component.
-        // If this component is there, then the installed component is higher in the chain.
-        var dependenciesOfInstalledComponent =
-            installedComponentOfSameMajorVersion.GetAllDependencies(manifestService);
-
-        if (dependenciesOfInstalledComponent.Contains(Key))
-        {
-            return false;
-        }
-
-        componentKeyToRemove = installedComponentOfSameMajorVersion.Key;
-        return true;
-    }
-
-    /// <summary>
-    /// Gets all the dependencies of the current component, as well as all the dependencies of the dependencies
-    /// of the current component all the way down to the last component in the chain recursively.
-    /// </summary>
-    /// <param name="manifestService">The manifest service.</param>
-    /// <returns>A list of the component keys of all dependencies of this component and their dependencies.</returns>
-    /// <exception cref="ApplicationException">When a key of dependent component is not found in the manifest.</exception>
-    private IEnumerable<string> GetAllDependencies(IManifestService manifestService)
-    {
-        var result = new HashSet<string>();
-        foreach (var dependency in Dependencies)
-        {
-            result.Add(dependency);
-            var component = manifestService.Merged.FirstOrDefault(c => c.Key.Equals(dependency));
-
-            if (component is null)
-            {
-                throw new ApplicationException($"Could not find dependency component {dependency}");
-            }
-
-            foreach (var subDependency in component.GetAllDependencies(manifestService))
-                result.Add(subDependency);
-        }
-
-        return result;
     }
 }

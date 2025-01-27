@@ -98,6 +98,10 @@ public class RemoveCommand : Command
             }
 
             await requestedComponent.Uninstall(_fileService, _manifestService, _snapService, _systemdService, _logger);
+            foreach (var reverseDependency in reverseDependencies)
+            {
+                await reverseDependency.Uninstall(_fileService, _manifestService, _snapService, _systemdService, _logger);
+            }
         }
         catch (ApplicationException ex)
         {
