@@ -35,7 +35,7 @@ public class Component
         // Install content snap on the machine
         if (!snapService.IsSnapInstalled(Key))
         {
-            var result = await snapService.Install(Key, edge: true); // TODO: Remove 'edge' flag from here
+            var result = await snapService.Install(Key);
             if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
         }
 
