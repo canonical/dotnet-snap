@@ -66,8 +66,12 @@ public class InstallCommand : Command
                     Environment.Exit(-1);
                 }
 
-                await requestedComponent.Install(_fileService, _manifestService, _snapService, _systemdService,
-                    isRootComponent: true, _logger);
+                await requestedComponent.Install(
+                    _fileService,
+                    _manifestService,
+                    _snapService,
+                    _systemdService,
+                    _logger);
 
                 return;
             }

@@ -2,7 +2,10 @@
 
 set -euxo pipefail
 
-# Remove remaining systemd-mount units from the system
+########################################################
+# Remove remaining systemd-mount units from the system #
+########################################################
+
 find /usr/lib/systemd/system/ -type f -name 'var-snap-dotnet-common-dotnet-*.mount' | while read -r file; do
     unit_name=$(echo "$file" | rev | cut -d / -f 1 | rev)
     systemctl stop "$unit_name"
@@ -10,8 +13,18 @@ find /usr/lib/systemd/system/ -type f -name 'var-snap-dotnet-common-dotnet-*.mou
     rm "$file"
 done
 
-# Remove remaining systemd-path units from the system
+#######################################################
+# Remove remaining systemd-path units from the system #
+#######################################################
+
 find /usr/lib/systemd/system/ -type f -name 'dotnet-*-update-watcher.*' | while read -r file; do
+    unit_name=$(echo "$file" | rev | cut -d / -f 1 | rev)
+    systemctl stop "$unit_name"
+    systemctl disable "$unit_name"
+    rm "$file"
+done
+
+find /usr/lib/systemd/system/ -type f -name 'aspnetcore-*-update-watcher.*' | while read -r file; do
     unit_name=$(echo "$file" | rev | cut -d / -f 1 | rev)
     systemctl stop "$unit_name"
     systemctl disable "$unit_name"
@@ -20,7 +33,10 @@ done
 
 systemctl daemon-reload
 
-# Remove left-over dotnet-* content snaps
+##################################
+# Remove left-over content snaps #
+##################################
+
 for snap in $(snap list | awk '{print $1}' | grep '^dotnet-.*'); do
     snap remove --purge "$snap"
 done

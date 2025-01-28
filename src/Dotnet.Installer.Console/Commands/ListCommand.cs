@@ -31,7 +31,7 @@ public class ListCommand : Command
             {
                 IsRequired = false
             };
-        
+
         var timeoutOption = new Option<uint>(
             name: "--timeout",
             description: "The timeout for requesting the version of a .NET component " +
@@ -91,13 +91,7 @@ public class ListCommand : Command
                         return "[grey]-[/]";
                     }
 
-                    string status = component.IsInstalled ? "[green][bold]Installed[/]" : "[blue][bold]Available[/]";
-
-                    if (component is { IsInstalled: true, IsRoot: false })
-                    {
-                        var rootComponent = majorVersionGroup.Single(c => c.IsRoot);
-                        status += $" (with {rootComponent.Name})";
-                    }
+                    var status = component.IsInstalled ? "[green][bold]Installed[/]" : "[blue][bold]Available[/]";
 
                     var version = componentVersions[component.Key];
                     status += version is null ? "[/]" : $" [[{version}]][/]";
@@ -154,12 +148,11 @@ public class ListCommand : Command
 
         var tasks = new List<Task>
         {
-            GetInstalledRootComponentsVersions(cancellationTokenSource.Token),
-            GetUninstalledComponentsVersions(cancellationTokenSource.Token),
-            GetInstalledNonRootComponentsVersions(cancellationTokenSource.Token),
+            GetInstalledComponentsVersions(cancellationTokenSource.Token),
+            GetUninstalledComponentsVersions(cancellationTokenSource.Token)
         };
 
-        int timeoutTaskCount = 0;
+        var timeoutTaskCount = 0;
 
         if (timeoutInMilliseconds > 0)
         {
@@ -196,12 +189,12 @@ public class ListCommand : Command
 
         return componentVersions;
 
-        async Task GetInstalledRootComponentsVersions(CancellationToken cancellationToken = default)
+        async Task GetInstalledComponentsVersions(CancellationToken cancellationToken = default)
         {
-            var installedRootComponents = components.Where(c => c.IsRoot);
+            var installedComponents = components.Where(c => c.IsInstalled);
             // ReSharper disable once PossibleMultipleEnumeration
             // The underlying list is not long. Therefore, the re-enumeration is cheaper than creating a new list/array.
-            if (!installedRootComponents.Any()) return;
+            if (!installedComponents.Any()) return;
 
             IImmutableList<SnapInfo> installedSnaps;
 
@@ -217,7 +210,7 @@ public class ListCommand : Command
             }
 
             // ReSharper disable once PossibleMultipleEnumeration (see reasoning above)
-            foreach (var component in installedRootComponents)
+            foreach (var component in installedComponents)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -237,28 +230,6 @@ public class ListCommand : Command
                 try
                 {
                     componentVersions[component.Key] = installedSnap.ParseVersionAsDotnetVersion();
-                }
-                catch (ApplicationException exception)
-                {
-                    anyFailure = true;
-                    _logger.LogDebug(exception.Message);
-                }
-            }
-        }
-
-        async Task GetInstalledNonRootComponentsVersions(CancellationToken cancellationToken = default)
-        {
-            // ensures that this action will be run asynchronously
-            await Task.Yield();
-
-            foreach (var component in components.Where(c => c is { IsRoot: false, IsInstalled: true }))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    var version = component.GetDotnetVersion(_manifestService, _fileService);
-                    componentVersions[component.Key] = version;
                 }
                 catch (ApplicationException exception)
                 {

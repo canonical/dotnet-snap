@@ -11,9 +11,17 @@ public partial class SnapService : ISnapService
         return Directory.Exists(Path.Combine("/", "snap", name));
     }
 
-    public Task<Terminal.InvocationResult> Install(string name, CancellationToken cancellationToken = default)
+    public Task<Terminal.InvocationResult> Install(string name, bool edge = false, CancellationToken cancellationToken = default)
     {
-        return Terminal.Invoke("snap", "install", name);
+        var arguments = new List<string>
+        {
+            "install"
+        };
+
+        if (edge) arguments.Add("--edge");
+        arguments.Add(name);
+
+        return Terminal.Invoke("snap", arguments.ToArray());
     }
 
     public Task<Terminal.InvocationResult> Remove(string name, bool purge = false, CancellationToken cancellationToken = default)

@@ -28,7 +28,7 @@ public class ComponentTests
         var snapService = new Mock<ISnapService>();
         var systemDService = new Mock<ISystemdService>();
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
@@ -44,7 +44,7 @@ public class ComponentTests
             h => component.InstallationStarted += h,
             h => component.InstallationStarted -= h,
             () => component.Install(fileService.Object, manifestService.Object, snapService.Object,
-                systemDService.Object, isRootComponent: true));
+                systemDService.Object));
 
         // Assert
         Assert.NotNull(evt);
@@ -72,7 +72,7 @@ public class ComponentTests
         var snapService = new Mock<ISnapService>();
         var systemDService = new Mock<ISystemdService>();
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
@@ -88,7 +88,7 @@ public class ComponentTests
             h => component.InstallationFinished += h,
             h => component.InstallationFinished -= h,
             () => component.Install(fileService.Object, manifestService.Object, snapService.Object,
-                systemDService.Object, isRootComponent: true));
+                systemDService.Object));
 
         // Assert
         Assert.NotNull(evt);
@@ -139,13 +139,13 @@ public class ComponentTests
 
         manifestService.Setup(s => s.Remote).Returns([component1, component2, component3]);
         manifestService.Setup(e => e.Add(
-                It.IsAny<Component>(), It.IsAny<bool>(), CancellationToken.None))
-            .Callback((Component c, bool isRootComponent, CancellationToken cancellationToken) =>
+                It.IsAny<Component>(), CancellationToken.None))
+            .Callback((Component c, CancellationToken cancellationToken) =>
             {
                 installedComponents.Add(c.Key);
             });
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
@@ -157,8 +157,7 @@ public class ComponentTests
             .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
 
         // Act
-        await component1.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object,
-            isRootComponent: true);
+        await component1.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object);
 
         // Assert
         Assert.True(installedComponents.Count == 3);
@@ -181,8 +180,7 @@ public class ComponentTests
             EndOfLife = DateTime.Now,
             Installation = new Installation
             {
-                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3)),
-                IsRootComponent = true
+                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3))
             }
         };
 

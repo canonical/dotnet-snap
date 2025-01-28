@@ -3,5 +3,4 @@
 public class Installation
 {
     public DateTimeOffset InstalledAt { get; set; }
-    public bool IsRootComponent { get; set; }
 }
