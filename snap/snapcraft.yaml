@@ -26,6 +26,19 @@ architectures:
   - build-on: [arm64]
     build-for: [arm64]
 
+plugs:
+  dotnet-manifest:
+    interface: content
+    target: $SNAP
+    content: dotnet-manifest
+    default-provider: dotnet-manifest
+
+  dotnet-sdk:
+    interface: content
+    target: $SNAP/usr/lib
+    content: dotnet-sdk-80
+    default-provider: dotnet-sdk-80
+
 parts:
   pre-reqs:
     plugin: nil
