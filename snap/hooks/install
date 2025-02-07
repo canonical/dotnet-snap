@@ -14,3 +14,6 @@ mkdir --parents "$SNAP_COMMON"/snap
 if [ ! -e "$SNAP_COMMON"/snap/manifest.json ]; then
     echo "[ ]" > "$SNAP_COMMON"/snap/manifest.json
 fi
+
+# Install .NET SDK
+DOTNET_INSTALL_DIR=$SNAP_COMMON/dotnet "$SNAP"/Dotnet.Installer.Console install sdk lts
