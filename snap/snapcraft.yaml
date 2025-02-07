@@ -118,6 +118,8 @@ parts:
       patchelf --set-interpreter $INTERPRETER usr/lib/dotnet/dotnet
       patchelf --force-rpath --set-rpath $RPATH usr/lib/dotnet/dotnet
       patchelf --force-rpath --set-rpath $RPATH usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
+      
+      ln --symbolic --force /var/snap/dotnet/common/dotnet/dotnet usr/bin/dotnet 
 
   netstandard-targeting-pack:
     plugin: nil
@@ -126,6 +128,9 @@ parts:
 
 apps:
   dotnet:
-    command: Scripts/dotnet-launcher.sh
+    command: usr/bin/dotnet
+
+  dotnet-installer:
+    command: Dotnet.Installer.Console
     environment:
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
