@@ -57,7 +57,7 @@ public class InstallCommand : Command
                     "lts" => _manifestService.Remote
                         .Where(c => c.IsLts && c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                         .MaxBy(c => c.MajorVersion),
-                    _ => _manifestService.MatchVersion(component, version)
+                    _ => _manifestService.MatchRemoteComponent(component, version)
                 };
 
                 if (requestedComponent is null)

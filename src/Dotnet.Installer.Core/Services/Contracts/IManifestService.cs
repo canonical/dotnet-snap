@@ -14,5 +14,6 @@ public interface IManifestService
     Task Initialize(bool includeUnsupported = false, CancellationToken cancellationToken = default);
     Task Add(Component component, CancellationToken cancellationToken = default);
     Task Remove(Component component, CancellationToken cancellationToken = default);
-    Component? MatchVersion(string component, string version);
+    Component? MatchRemoteComponent(string component, string version);
+    Component? MatchLocalComponent(string component, string version);
 }

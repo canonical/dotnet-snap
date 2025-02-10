@@ -77,24 +77,36 @@ public partial class ManifestService : IManifestService
         await Refresh(cancellationToken);
     }
 
-    public Component? MatchVersion(string component, string version)
+    public Component? MatchRemoteComponent(string component, string version)
     {
-        if (string.IsNullOrWhiteSpace(version)) return default;
+        return MatchComponent(component, version, remote: true);
+    }
+
+    public Component? MatchLocalComponent(string component, string version)
+    {
+        return MatchComponent(component, version, remote: false);
+    }
+
+    private Component? MatchComponent(string component, string version, bool remote = true)
+    {
+        if (string.IsNullOrWhiteSpace(component)) return null;
+        if (string.IsNullOrWhiteSpace(version)) return null;
 
         return version.Length switch
         {
             // Major version only, e.g. install sdk 8
-            1 => _remote.Where(c => c.MajorVersion == int.Parse(version) &&
+            1 => (remote ? _remote : _local).Where(c =>
+                    c.MajorVersion == int.Parse(version) &&
                     c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                 .MaxBy(c => c.MajorVersion),
 
             // Major and minor version only, e.g. install sdk 8.0
-            3 => _remote.Where(c => // "8.0"
+            3 => (remote ? _remote : _local).Where(c => // "8.0"
                     c.MajorVersion == int.Parse(version[..1]) &&
                     c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
                 .MaxBy(c => c.MajorVersion),
 
-            _ => default
+            _ => null
         };
     }
 }
