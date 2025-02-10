@@ -144,6 +144,6 @@ apps:
     command: usr/bin/dotnet
 
   dotnet-installer:
-    command: Dotnet.Installer.Console
+    command: Scripts/dotnet-installer-launcher.sh
     environment:
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
