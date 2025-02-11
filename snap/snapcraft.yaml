@@ -33,12 +33,6 @@ plugs:
     content: dotnet-manifest
     default-provider: dotnet-manifest
 
-  dotnet-sdk:
-    interface: content
-    target: $SNAP/usr/lib
-    content: dotnet-sdk-80
-    default-provider: dotnet-sdk-80
-
 parts:
   pre-reqs:
     plugin: nil
@@ -141,7 +135,9 @@ parts:
 
 apps:
   dotnet:
-    command: usr/bin/dotnet
+    command: Scripts/dotnet-launcher.sh
+    environment:
+      DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
 
   dotnet-installer:
     command: Scripts/dotnet-installer-launcher.sh
