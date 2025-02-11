@@ -27,7 +27,6 @@ jobs:
         id: install-dotnet
         run: |
           sudo apt-get update
-          sudo apt-get upgrade --yes
           sudo apt-get install --yes dotnet-sdk-8.0
           echo "DPKG_ARCH=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
 
@@ -114,7 +113,6 @@ jobs:
         id: install-dotnet
         run: |
           sudo apt-get update
-          sudo apt-get upgrade --yes
           sudo apt-get install --yes dotnet-sdk-8.0
 
       - name: Install reportgenerator tool
