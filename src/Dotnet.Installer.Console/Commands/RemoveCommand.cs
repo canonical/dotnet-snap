@@ -30,11 +30,11 @@ public class RemoveCommand : Command
 
         var componentArgument = new Argument<string>(
             name: "component",
-            description: "The .NET component name to be removed (dotnet-runtime, aspnetcore-runtime, runtime, sdk)."
+            description: "The .NET component name to be removed ('runtime', 'aspnetcore-runtime', 'sdk')."
         );
         var versionArgument = new Argument<string>(
             name: "version",
-            description: "The .NET component version to be removed (version)."
+            description: "The .NET component version to be removed (version (e.g. '8' or '8.0'), 'lts', 'latest')."
         );
         var yesOption = new Option<bool>(
             name: "--yes",
