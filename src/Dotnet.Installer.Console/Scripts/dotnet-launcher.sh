@@ -10,7 +10,7 @@ if [[ $("$SNAP"/usr/bin/jq 'length' "$manifest_path") -eq 0 ]]; then
     echo "I am downloading and installing the latest LTS SDK for you to use. It should only be a few moments."
 
     if ! "$SNAP/Scripts/dotnet-installer-launcher.sh" install sdk lts; then
-        echo "Could not install the latest .NET SDK. Please check your credentials or run this command with sudo."
+        echo "Could not install the latest LTS .NET SDK. Please check your credentials or run this command with sudo."
         exit 255
     fi
 fi
