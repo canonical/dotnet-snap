@@ -27,12 +27,12 @@ public class InstallCommand : Command
 
         var componentArgument = new Argument<string>(
             name: "component",
-            description: "The .NET component name to be installed (dotnet-runtime, aspnetcore-runtime, sdk).",
+            description: "The .NET component name to be installed ('runtime', 'aspnetcore-runtime', 'sdk').",
             getDefaultValue: () => "sdk"
         );
         var versionArgument = new Argument<string>(
             name: "version",
-            description: "The .NET component version to be installed (version or latest).",
+            description: "The .NET component version to be installed (version (e.g. '8' or '8.0'), lts, latest).",
             getDefaultValue: () => "latest"
         );
         AddArgument(componentArgument);
@@ -49,16 +49,7 @@ public class InstallCommand : Command
             {
                 await _manifestService.Initialize(includeUnsupported: true);
 
-                var requestedComponent = version switch
-                {
-                    "latest" => _manifestService.Remote
-                        .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                        .MaxBy(c => c.MajorVersion),
-                    "lts" => _manifestService.Remote
-                        .Where(c => c.IsLts && c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                        .MaxBy(c => c.MajorVersion),
-                    _ => _manifestService.MatchVersion(component, version)
-                };
+                var requestedComponent = _manifestService.MatchRemoteComponent(component, version);
 
                 if (requestedComponent is null)
                 {

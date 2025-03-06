@@ -30,11 +30,11 @@ public class RemoveCommand : Command
 
         var componentArgument = new Argument<string>(
             name: "component",
-            description: "The .NET component name to be removed (dotnet-runtime, aspnetcore-runtime, runtime, sdk)."
+            description: "The .NET component name to be removed ('runtime', 'aspnetcore-runtime', 'sdk')."
         );
         var versionArgument = new Argument<string>(
             name: "version",
-            description: "The .NET component version to be removed (version)."
+            description: "The .NET component version to be removed (version (e.g. '8' or '8.0'), 'lts', 'latest')."
         );
         var yesOption = new Option<bool>(
             name: "--yes",
@@ -62,13 +62,7 @@ public class RemoveCommand : Command
 
             await _manifestService.Initialize();
 
-            var requestedComponent = version switch
-            {
-                "latest" => _manifestService.Remote
-                    .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                    .MaxBy(c => c.MajorVersion),
-                _ => _manifestService.MatchVersion(component, version)
-            };
+            var requestedComponent = _manifestService.MatchLocalComponent(component, version);
 
             if (requestedComponent is null)
             {

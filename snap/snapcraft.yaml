@@ -26,6 +26,13 @@ architectures:
   - build-on: [arm64]
     build-for: [arm64]
 
+plugs:
+  dotnet-manifest:
+    interface: content
+    target: $SNAP
+    content: dotnet-manifest
+    default-provider: dotnet-manifest
+
 parts:
   pre-reqs:
     plugin: nil
@@ -118,6 +125,8 @@ parts:
       patchelf --set-interpreter $INTERPRETER usr/lib/dotnet/dotnet
       patchelf --force-rpath --set-rpath $RPATH usr/lib/dotnet/dotnet
       patchelf --force-rpath --set-rpath $RPATH usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
+      
+      ln --symbolic --force /var/snap/dotnet/common/dotnet/dotnet usr/bin/dotnet 
 
   netstandard-targeting-pack:
     plugin: nil
@@ -127,5 +136,10 @@ parts:
 apps:
   dotnet:
     command: Scripts/dotnet-launcher.sh
+    environment:
+      DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
+
+  dotnet-installer:
+    command: Scripts/dotnet-installer-launcher.sh
     environment:
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet

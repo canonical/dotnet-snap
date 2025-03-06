@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.RegularExpressions;
 using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 
@@ -6,6 +7,9 @@ namespace Dotnet.Installer.Core.Services.Implementations;
 
 public partial class ManifestService : IManifestService
 {
+    private static Regex DotnetVersionPattern = new (
+        pattern: @"\A(?'major'\d+)(?:\.(?'minor'\d+))?\z");
+
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -77,24 +81,51 @@ public partial class ManifestService : IManifestService
         await Refresh(cancellationToken);
     }
 
-    public Component? MatchVersion(string component, string version)
+    public Component? MatchRemoteComponent(string component, string version)
     {
-        if (string.IsNullOrWhiteSpace(version)) return default;
+        return MatchComponent(component, version, remote: true);
+    }
 
-        return version.Length switch
+    public Component? MatchLocalComponent(string component, string version)
+    {
+        return MatchComponent(component, version, remote: false);
+    }
+
+    private Component? MatchComponent(string component, string version, bool remote = true)
+    {
+        if (string.IsNullOrWhiteSpace(component)) return null;
+        if (string.IsNullOrWhiteSpace(version)) return null;
+
+        var components = remote ? _remote : _local;
+
+        if (version.Equals("lts", StringComparison.CurrentCultureIgnoreCase))
         {
-            // Major version only, e.g. install sdk 8
-            1 => _remote.Where(c => c.MajorVersion == int.Parse(version) &&
-                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                .MaxBy(c => c.MajorVersion),
+            return components
+                .Where(c => c.IsLts && c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                .MaxBy(c => c.MajorVersion);
+        }
 
-            // Major and minor version only, e.g. install sdk 8.0
-            3 => _remote.Where(c => // "8.0"
-                    c.MajorVersion == int.Parse(version[..1]) &&
-                    c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                .MaxBy(c => c.MajorVersion),
+        if (version.Equals("latest", StringComparison.CurrentCultureIgnoreCase))
+        {
+            return components
+                .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+                .MaxBy(c => c.MajorVersion);
+        }
 
-            _ => default
-        };
+        var parsedVersion = DotnetVersionPattern.Match(version);
+
+        if (!parsedVersion.Success) return null;
+        if (parsedVersion.Groups.ContainsKey("minor") 
+            && int.Parse(parsedVersion.Groups["minor"].Value) != 0)
+        {
+            return null;
+        }
+
+        int majorVersion = int.Parse(parsedVersion.Groups["major"].Value);
+
+        return components.Where(c => 
+                c.MajorVersion == majorVersion &&
+                c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
+            .MaxBy(c => c.MajorVersion);
     }
 }
