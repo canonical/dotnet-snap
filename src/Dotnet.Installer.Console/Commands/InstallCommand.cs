@@ -49,16 +49,7 @@ public class InstallCommand : Command
             {
                 await _manifestService.Initialize(includeUnsupported: true);
 
-                var requestedComponent = version switch
-                {
-                    "latest" => _manifestService.Remote
-                        .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                        .MaxBy(c => c.MajorVersion),
-                    "lts" => _manifestService.Remote
-                        .Where(c => c.IsLts && c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                        .MaxBy(c => c.MajorVersion),
-                    _ => _manifestService.MatchRemoteComponent(component, version)
-                };
+                var requestedComponent = _manifestService.MatchRemoteComponent(component, version);
 
                 if (requestedComponent is null)
                 {

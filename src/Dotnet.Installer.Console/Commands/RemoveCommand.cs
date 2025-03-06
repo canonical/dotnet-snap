@@ -62,16 +62,7 @@ public class RemoveCommand : Command
 
             await _manifestService.Initialize();
 
-            var requestedComponent = version switch
-            {
-                "latest" => _manifestService.Local
-                    .Where(c => c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                    .MaxBy(c => c.MajorVersion),
-                "lts" => _manifestService.Local
-                    .Where(c => c.IsLts && c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
-                    .MaxBy(c => c.MajorVersion),
-                _ => _manifestService.MatchLocalComponent(component, version)
-            };
+            var requestedComponent = _manifestService.MatchLocalComponent(component, version);
 
             if (requestedComponent is null)
             {
