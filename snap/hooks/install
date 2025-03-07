@@ -2,6 +2,11 @@
 
 set -euxo pipefail
 
+# Install dotnet-manifest snap if it does not exist
+if [ ! -d "/snap/dotnet-manifest" ]; then
+    /usr/bin/snap install dotnet-manifest
+fi
+
 # Create $SNAP_COMMON if doesn't exist
 mkdir --parents "$SNAP_COMMON"
 
