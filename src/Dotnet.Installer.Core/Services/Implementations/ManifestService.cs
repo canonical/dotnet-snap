@@ -115,8 +115,7 @@ public partial class ManifestService : IManifestService
         var parsedVersion = DotnetVersionPattern.Match(version);
 
         if (!parsedVersion.Success) return null;
-        if (parsedVersion.Groups.ContainsKey("minor")
-            && !string.IsNullOrWhiteSpace(parsedVersion.Groups["minor"].Value)
+        if (parsedVersion.Groups["minor"].Success)
             && int.Parse(parsedVersion.Groups["minor"].Value) != 0)
         {
             return null;
