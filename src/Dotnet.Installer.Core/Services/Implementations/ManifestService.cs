@@ -7,7 +7,7 @@ namespace Dotnet.Installer.Core.Services.Implementations;
 
 public partial class ManifestService : IManifestService
 {
-    private static Regex DotnetVersionPattern = new (
+    private static readonly Regex DotnetVersionPattern = new (
         pattern: @"\A(?'major'\d+)(?:\.(?'minor'\d+))?\z");
 
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
@@ -115,15 +115,15 @@ public partial class ManifestService : IManifestService
         var parsedVersion = DotnetVersionPattern.Match(version);
 
         if (!parsedVersion.Success) return null;
-        if (parsedVersion.Groups.ContainsKey("minor") 
+        if (parsedVersion.Groups["minor"].Success
             && int.Parse(parsedVersion.Groups["minor"].Value) != 0)
         {
             return null;
         }
 
-        int majorVersion = int.Parse(parsedVersion.Groups["major"].Value);
+        var majorVersion = int.Parse(parsedVersion.Groups["major"].Value);
 
-        return components.Where(c => 
+        return components.Where(c =>
                 c.MajorVersion == majorVersion &&
                 c.Name.Equals(component, StringComparison.CurrentCultureIgnoreCase))
             .MaxBy(c => c.MajorVersion);
