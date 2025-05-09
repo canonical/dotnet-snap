@@ -57,21 +57,25 @@ parts:
       chmod 555 "${SNAPCRAFT_PART_INSTALL}/Dotnet.Installer.Console"
 
       patchelf --force-rpath --set-rpath \
-        \$ORIGIN/netcoredeps:\$ORIGIN/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/x86_64-linux-gnu \
+        \$ORIGIN/netcoredeps:\$ORIGIN/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/{CRAFT_ARCH_TRIPLET_BUILD_FOR} \
         ${SNAPCRAFT_PART_INSTALL}/Dotnet.Installer.Console
 
   dotnet-host:
     plugin: nil
     build-packages:
       - patchelf
-    build-attributes:
-      - enable-patchelf
     stage-packages:
       - dotnet-hostfxr-9.0
     override-build: |
+      DOTNET_VERSION=$(craftctl get version)
+      INTERPRETER=$(find /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR} -type f -name ld-linux** | head -n 1)
+      patchelf --set-interpreter ${INTERPRETER} ${SNAPCRAFT_PART_INSTALL}/usr/lib/dotnet/dotnet
       patchelf --force-rpath --set-rpath \
-        /snap/dotnet/current/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/x86_64-linux-gnu \
+        /snap/dotnet/current/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/{CRAFT_ARCH_TRIPLET_BUILD_FOR} \
         ${SNAPCRAFT_PART_INSTALL}/usr/lib/dotnet/dotnet
+      patchelf --force-rpath --set-rpath \
+        /snap/dotnet/current/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/{CRAFT_ARCH_TRIPLET_BUILD_FOR} \
+        ${SNAPCRAFT_PART_INSTALL}/usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
 
   netstandard-targeting-pack:
     plugin: nil
