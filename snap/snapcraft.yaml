@@ -12,7 +12,7 @@ description: |
   multiple versions of .NET side-by-side as you want, as well as receive
   monthly security and feature updates whenever they become available.
 
-grade: devel # must be 'stable' to release into candidate/stable channels
+grade: stable
 confinement: classic
 
 package-repositories:
