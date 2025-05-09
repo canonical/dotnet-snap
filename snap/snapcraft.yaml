@@ -93,3 +93,8 @@ apps:
     command: Scripts/dotnet-installer-launcher.sh
     environment:
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
+
+lint:
+  ignore:
+    - library:
+      - usr/lib/**/libicu*
