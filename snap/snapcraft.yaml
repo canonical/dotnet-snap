@@ -12,7 +12,7 @@ description: |
   multiple versions of .NET side-by-side as you want, as well as receive
   monthly security and feature updates whenever they become available.
 
-grade: devel # must be 'stable' to release into candidate/stable channels
+grade: stable
 confinement: classic
 
 package-repositories:
@@ -27,34 +27,22 @@ architectures:
     build-for: [arm64]
 
 parts:
-  pre-reqs:
-    plugin: nil
-    build-attributes:
-      - enable-patchelf
-    stage-packages:
-      - libc6
-      - libgcc-s1
-      - libgssapi-krb5-2
-      - libicu70
-      - liblttng-ust1
-      - libssl3
-      - libstdc++6
-      - libunwind8
-      - zlib1g
-
   dotnet-installer:
     plugin: dump
     source: .
-    after: [ pre-reqs ]
     build-packages:
       - dotnet-sdk-9.0
+      - patchelf
     stage-packages:
       - jq
+      - libicu70
+    build-attributes:
+      - enable-patchelf
     override-build: |
       /usr/bin/dotnet --info
       SNAP_VERSION=$(/usr/bin/dotnet --list-runtimes | grep NETCore.App | awk '{print $2}' | sort -r | head -n 1)
       craftctl set version="$SNAP_VERSION"
-      
+
       if [ "${CRAFT_ARCH_BUILD_FOR}" = "amd64" ]; then
         RUNTIME_RID="linux-x64"
       elif [ "${CRAFT_ARCH_BUILD_FOR}" = "arm64" ]; then
@@ -64,62 +52,31 @@ parts:
         exit 1
       fi
 
-      /usr/bin/dotnet publish src/Dotnet.Installer.Console --output "${SNAPCRAFT_PART_INSTALL}" \
+      /usr/bin/dotnet publish src/Dotnet.Installer.Console --output "${CRAFT_PART_INSTALL}" \
         --configuration Release -r "${RUNTIME_RID}" -p:DebugSymbols=false -p:DebugType=none
-      chmod 555 "${SNAPCRAFT_PART_INSTALL}/Dotnet.Installer.Console"
-    override-stage: |
-      craftctl default
+      chmod 555 "${CRAFT_PART_INSTALL}/Dotnet.Installer.Console"
 
-      if [ "${CRAFT_ARCH_BUILD_FOR}" = "amd64" ]; then
-        LIB_PATH=lib/x86_64-linux-gnu
-        INTERPRETER="/snap/dotnet/current/lib64/ld-linux-x86-64.so.2"
-
-        patchelf --force-rpath --set-rpath \$ORIGIN/../${LIB_PATH} \
-          ${CRAFT_STAGE}/usr/bin/jq
-        patchelf --force-rpath --set-rpath \$ORIGIN/usr/${LIB_PATH} \
-          ${CRAFT_STAGE}/Dotnet.Installer.Console
-      elif [ "${CRAFT_ARCH_BUILD_FOR}" = "arm64" ]; then
-        LIB_PATH=lib/aarch64-linux-gnu
-        INTERPRETER="/snap/dotnet/current/lib/ld-linux-aarch64.so.1"
-
-        patchelf --force-rpath --set-rpath \$ORIGIN/../${LIB_PATH}:\$ORIGIN/../../${LIB_PATH} \
-          ${CRAFT_STAGE}/usr/bin/jq
-        patchelf --force-rpath --set-rpath \$ORIGIN/${LIB_PATH}:\$ORIGIN/usr/${LIB_PATH} \
-          ${CRAFT_STAGE}/Dotnet.Installer.Console
-      else
-        echo "Unsupported architecture (${CRAFT_ARCH_BUILD_FOR})"
-        exit 1
-      fi
-
-      patchelf --set-interpreter $INTERPRETER ${CRAFT_STAGE}/usr/bin/jq
-      patchelf --set-interpreter $INTERPRETER ${CRAFT_STAGE}/Dotnet.Installer.Console
+      patchelf --force-rpath --set-rpath \
+        \$ORIGIN/netcoredeps:\$ORIGIN/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR} \
+        ${CRAFT_PART_INSTALL}/Dotnet.Installer.Console
 
   dotnet-host:
     plugin: nil
+    after: [dotnet-installer]
     build-packages:
       - patchelf
     stage-packages:
       - dotnet-hostfxr-9.0
-    override-stage: |
-      craftctl default
-
-      if [ "${CRAFT_ARCH_BUILD_FOR}" = "amd64" ]; then
-        INTERPRETER="/snap/dotnet/current/lib64/ld-linux-x86-64.so.2"
-        RPATH="/snap/dotnet/current/usr/lib/x86_64-linux-gnu"
-      elif [ "${CRAFT_ARCH_BUILD_FOR}" = "arm64" ]; then
-        INTERPRETER="/snap/dotnet/current/lib/ld-linux-aarch64.so.1"
-        RPATH="/snap/dotnet/current/usr/lib/aarch64-linux-gnu:/snap/dotnet/current/lib/aarch64-linux-gnu"
-      else
-        echo "Unsupported architecture (${CRAFT_ARCH_BUILD_FOR})"
-        exit 1
-      fi
-
+    override-build: |
       DOTNET_VERSION=$(craftctl get version)
-      patchelf --set-interpreter $INTERPRETER usr/lib/dotnet/dotnet
-      patchelf --force-rpath --set-rpath $RPATH usr/lib/dotnet/dotnet
-      patchelf --force-rpath --set-rpath $RPATH usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
-      
-      ln --symbolic --force /var/snap/dotnet/common/dotnet/dotnet usr/bin/dotnet 
+      INTERPRETER=$(find /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR} -type f -name ld-linux** | head -n 1)
+      patchelf --set-interpreter /snap/core22/current${INTERPRETER} ${CRAFT_PART_INSTALL}/usr/lib/dotnet/dotnet
+      patchelf --force-rpath --set-rpath \
+        /snap/dotnet/current/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR} \
+        ${CRAFT_PART_INSTALL}/usr/lib/dotnet/dotnet
+      patchelf --force-rpath --set-rpath \
+        /snap/dotnet/current/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR} \
+        ${CRAFT_PART_INSTALL}/usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
 
   netstandard-targeting-pack:
     plugin: nil
@@ -136,3 +93,8 @@ apps:
     command: Scripts/dotnet-installer-launcher.sh
     environment:
       DOTNET_INSTALL_DIR: $SNAP_COMMON/dotnet
+
+lint:
+  ignore:
+    - library:
+      - usr/lib/**/libicu*
