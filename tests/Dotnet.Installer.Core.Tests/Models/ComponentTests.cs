@@ -29,7 +29,7 @@ public class ComponentTests
         var snapService = new Mock<ISnapService>();
         var systemDService = new Mock<ISystemdService>();
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<SnapChannel>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
@@ -74,7 +74,7 @@ public class ComponentTests
         var snapService = new Mock<ISnapService>();
         var systemDService = new Mock<ISystemdService>();
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<SnapChannel>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
@@ -150,7 +150,7 @@ public class ComponentTests
                 installedComponents.Add(c.Key);
             });
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<SnapChannel>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 

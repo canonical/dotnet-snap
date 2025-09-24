@@ -35,7 +35,18 @@ public class Component
         // Install content snap on the machine
         if (!snapService.IsSnapInstalled(Key))
         {
-            var result = await snapService.Install(Key);
+            // Gather highest channel available
+            var snapInfo = await snapService.FindSnap(Key);
+
+            var channel = snapInfo?.Channel switch
+            {
+                "candidate" => SnapChannel.Candidate,
+                "beta" => SnapChannel.Beta,
+                "edge" => SnapChannel.Edge,
+                _ => SnapChannel.Stable
+            };
+
+            var result = await snapService.Install(Key, channel);
             if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
         }
 
