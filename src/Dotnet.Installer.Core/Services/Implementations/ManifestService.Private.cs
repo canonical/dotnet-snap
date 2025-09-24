@@ -23,7 +23,7 @@ public partial class ManifestService
         return result ?? [];
     }
 
-    private static async Task<List<Component>> LoadRemote(bool includeUnsupported = false,
+    private static async Task<List<Component>> LoadRemote(bool includeUnsupported = false, bool includePrerelease = false,
         CancellationToken cancellationToken = default)
     {
         var filesToRead = new List<string>
@@ -44,10 +44,14 @@ public partial class ManifestService
                 JsonSerializerOptions,
                 cancellationToken: cancellationToken);
 
-            if (currentComponents is not null)
+            if (currentComponents is null) continue;
+
+            if (!includePrerelease)
             {
-                components.AddRange(currentComponents);
+                currentComponents = currentComponents.Where(c => c.IsStable).ToList();
             }
+
+            components.AddRange(currentComponents);
         }
 
         return components;
@@ -56,7 +60,7 @@ public partial class ManifestService
     private async Task Refresh(CancellationToken cancellationToken = default)
     {
         _local = await LoadLocal(cancellationToken);
-        _remote = await LoadRemote(_includeUnsupported, cancellationToken);
+        _remote = await LoadRemote(_includeUnsupported, _includePrerelease, cancellationToken);
         _merged = Merge(_remote, _local);
     }
 

@@ -49,9 +49,14 @@ public class ListCommand : Command
 
     private async Task Handle(bool includeUnsupported, uint timeoutInMilliseconds)
     {
+#if INCLUDE_PRERELEASE
+        const bool includePrerelease = true;
+#else
+        const bool includePrerelease = false;
+#endif
         try
         {
-            await _manifestService.Initialize(includeUnsupported);
+            await _manifestService.Initialize(includeUnsupported, includePrerelease);
 
             var table = new Table();
 

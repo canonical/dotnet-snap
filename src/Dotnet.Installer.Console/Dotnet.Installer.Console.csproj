@@ -8,6 +8,10 @@
     <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(IncludePrerelease)' == 'true'">
+    <DefineConstants>INCLUDE_PRERELEASE</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Spectre.Console" Version="0.49.1" />
@@ -17,7 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Dotnet.Installer.Core\Dotnet.Installer.Core.csproj" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Content Include="Scripts/*.*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
