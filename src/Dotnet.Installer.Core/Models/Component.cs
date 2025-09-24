@@ -12,8 +12,8 @@ public class Component
     public required string Description { get; init; }
     public required int MajorVersion { get; init; }
     public required bool IsLts { get; init; }
-    [JsonPropertyName("eol")]
-    public required DateTime EndOfLife { get; init; }
+    public required bool IsStable { get; set; }
+    [JsonPropertyName("eol")] public DateTime? EndOfLife { get; init; }
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
     public bool IsInstalled => Installation is not null;

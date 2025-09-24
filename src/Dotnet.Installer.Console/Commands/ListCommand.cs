@@ -102,7 +102,13 @@ public class ListCommand : Command
                 string EndOfLifeStatus()
                 {
                     var endOfLife = majorVersionGroup.First().EndOfLife;
-                    var daysUntilEndOfLife = (endOfLife - DateTime.Now).TotalDays;
+
+                    if (endOfLife is null)
+                    {
+                        return "[grey]-[/]";
+                    }
+
+                    var daysUntilEndOfLife = (endOfLife.Value - DateTime.Now).TotalDays;
 
                     var eolString = $"[{(daysUntilEndOfLife <= 0d ? "bold red" : "green")}]{endOfLife:d}[/]";
 
