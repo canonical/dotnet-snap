@@ -4,8 +4,6 @@ namespace Dotnet.Installer.Core.Types;
 
 public static partial class Native
 {
-    public const int RootUid = 0;
-    
     [LibraryImport("libc.so.6")]
     private static partial int geteuid();
 
