@@ -64,10 +64,7 @@ public partial class ManifestService : IManifestService
 
     public async Task Add(Component component, CancellationToken cancellationToken = default)
     {
-        component.Installation = new Installation
-        {
-            InstalledAt = DateTimeOffset.UtcNow
-        };
+        component.Installation = new Installation(DateTimeOffset.UtcNow);
         _local.Add(component);
         await Save(cancellationToken);
         await Refresh(cancellationToken);

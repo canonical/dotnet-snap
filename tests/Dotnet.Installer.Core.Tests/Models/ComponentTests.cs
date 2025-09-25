@@ -184,10 +184,7 @@ public class ComponentTests
             IsLts = false,
             Grade = Grade.Rtm,
             EndOfLife = DateTime.Now,
-            Installation = new Installation
-            {
-                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3))
-            }
+            Installation = new Installation(new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3)))
         };
 
         var fileService = new Mock<IFileService>();
