@@ -12,7 +12,7 @@ description: |
   multiple versions of .NET side-by-side as you want, as well as receive
   monthly security and feature updates whenever they become available.
 
-grade: stable
+grade: devel
 confinement: classic
 
 package-repositories:
@@ -40,14 +40,14 @@ parts:
       - enable-patchelf
     override-build: |
       /usr/bin/dotnet --info
-      
+
       include_prerelease=false
       git_branch=$(git rev-parse --abbrev-ref HEAD)
       if [ "$git_branch" != "release/stable" ]; then
         echo "On a non-stable branch, enabling prerelease versions"
         include_prerelease=true
       fi
-      
+
       SNAP_VERSION=$(/usr/bin/dotnet --list-runtimes | grep NETCore.App | awk '{print $2}' | sort -r | head -n 1)
       craftctl set version="$SNAP_VERSION"
 
