@@ -48,7 +48,7 @@ public partial class ManifestService
 
             if (!includePrerelease)
             {
-                currentComponents = currentComponents.Where(c => c.IsStable).ToList();
+                currentComponents = currentComponents.Where(c => c.Grade == Grade.Rtm).ToList();
             }
 
             components.AddRange(currentComponents);

@@ -20,7 +20,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
-            IsStable = true,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 
@@ -65,7 +65,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
-            IsStable = true,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 
@@ -111,7 +111,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
-            IsStable = true,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
         var component2 = new Component
@@ -122,7 +122,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
-            IsStable = true,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
         var component3 = new Component
@@ -133,7 +133,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
-            IsStable = true,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 
@@ -182,7 +182,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
-            IsStable = true,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now,
             Installation = new Installation
             {
