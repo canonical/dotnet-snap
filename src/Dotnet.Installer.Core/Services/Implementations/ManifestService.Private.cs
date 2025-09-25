@@ -61,10 +61,10 @@ public partial class ManifestService
     {
         _local = await LoadLocal(cancellationToken);
         _remote = await LoadRemote(_includeUnsupported, _includePrerelease, cancellationToken);
-        _merged = Merge(_remote, _local);
+        _merged = MergeManifests(_remote, _local);
     }
 
-    private static List<Component> Merge(List<Component> remoteComponents, List<Component> localComponents)
+    private static List<Component> MergeManifests(List<Component> remoteComponents, List<Component> localComponents)
     {
         var result = new List<Component>();
         result.AddRange(remoteComponents);
@@ -73,10 +73,12 @@ public partial class ManifestService
         {
             if (result.All(c => c.Key != localComponent.Key))
             {
+                // Local component is not in remote, add it
                 result.Add(localComponent);
             }
             else
             {
+                // Local component exists in remote. Take it as source of truth and update installation info
                 var remote = result.First(c => c.Key == localComponent.Key);
                 remote.Installation = localComponent.Installation;
             }
