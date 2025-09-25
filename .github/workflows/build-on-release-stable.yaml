@@ -1,0 +1,101 @@
+name: Build on release/stable
+
+on:
+  push:
+    branches: release/stable
+  pull_request:
+    branches: release/stable
+  workflow_dispatch:
+
+permissions:
+  checks: write
+  pull-requests: write
+
+jobs:
+  unit-test:
+    strategy:
+      matrix:
+        os:
+          - [self-hosted, large, jammy, X64]
+          - [self-hosted, large, jammy, ARM64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        id: checkout
+
+      - name: Install .NET
+        id: install-dotnet
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes dotnet-sdk-8.0
+          echo "DPKG_ARCH=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
+
+      - name: Run Tests
+        run: dotnet test --verbosity normal --logger trx --results-directory TestResults
+
+      - name: Publish Test Results to Workflow
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          check_name: test-results
+          comment_title: Test Results (${{ steps.install-dotnet.outputs.DPKG_ARCH }})
+          files: |
+            TestResults/*.trx
+
+  snapcraft-build:
+    strategy:
+      matrix:
+        os:
+          - [self-hosted, large, jammy, X64]
+          - [self-hosted, large, jammy, ARM64]
+    runs-on: ${{ matrix.os }}
+    needs: unit-test
+    steps:
+      - uses: actions/checkout@v4
+        id: checkout
+
+      - name: Retrieve Architecture
+        id: get-arch
+        run: echo "DPKG_ARCH=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
+
+      - name: Run Snapcraft
+        id: snapcraft
+        uses: snapcore/action-build@v1
+
+      - name: Upload Snap to workflow artifacts
+        id: upload-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-${{ steps.get-arch.outputs.DPKG_ARCH }}
+          path: ${{ steps.snapcraft.outputs.snap }}
+
+  snapcraft-publish:
+    runs-on: ubuntu-latest
+    if: ${{ contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name == 'release/stable' }}
+    needs: snapcraft-build
+    strategy:
+      matrix:
+        artifact-name:
+          - dotnet-amd64
+          - dotnet-arm64
+    steps:
+      - uses: actions/download-artifact@v4
+        id: download-artifact
+        with:
+          name: ${{ matrix.artifact-name }}
+
+      - name: Gather filename
+        id: gather-filename
+        env:
+          ARTIFACT_PATH: ${{ steps.download-artifact.outputs.download-path }}
+        run: |
+          ls -la $ARTIFACT_PATH
+          SNAP_FILE_NAME=$(ls ${ARTIFACT_PATH}/dotnet*.snap)
+          echo "SNAP_PATH=${SNAP_FILE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_LOGIN }}
+        with:
+          snap: ${{ steps.gather-filename.outputs.SNAP_PATH }}
+          release: candidate
