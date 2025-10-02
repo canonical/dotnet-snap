@@ -26,14 +26,21 @@ public partial class ManifestService
     private static async Task<List<Component>> LoadRemote(bool includeUnsupported = false, bool includePrerelease = false,
         CancellationToken cancellationToken = default)
     {
+        var manifestSnapRootPath = Path.Join("/", "snap", "dotnet-manifest", "current");
+
         var filesToRead = new List<string>
         {
-            Path.Join("/", "snap", "dotnet-manifest", "current", "supported.json")
+            Path.Join(manifestSnapRootPath, "supported.json")
         };
 
         if (includeUnsupported)
         {
-            filesToRead.Add(Path.Join("/", "snap", "dotnet-manifest", "current", "unsupported.json"));
+            filesToRead.Add(Path.Join(manifestSnapRootPath, "unsupported.json"));
+        }
+
+        if (includePrerelease)
+        {
+            filesToRead.Add(Path.Join(manifestSnapRootPath, "previews.json"));
         }
 
         var components = new List<Component>();
@@ -45,11 +52,6 @@ public partial class ManifestService
                 cancellationToken: cancellationToken);
 
             if (currentComponents is null) continue;
-
-            if (!includePrerelease)
-            {
-                currentComponents = currentComponents.Where(c => c.Grade == Grade.Rtm).ToList();
-            }
 
             components.AddRange(currentComponents);
         }
