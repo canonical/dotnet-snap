@@ -1,10 +1,10 @@
-name: Build on main
+name: Build on release/stable
 
 on:
   push:
-    branches: main
+    branches: release/stable
   pull_request:
-    branches: main
+    branches: release/stable
   workflow_dispatch:
 
 permissions:
@@ -26,9 +26,8 @@ jobs:
       - name: Install .NET
         id: install-dotnet
         run: |
-          sudo add-apt-repository --yes ppa:dotnet/previews
-          sudo add-apt-repository --yes ppa:dotnet/backports
-          sudo apt-get install --yes dotnet10
+          sudo apt-get update
+          sudo apt-get install --yes dotnet-sdk-8.0
           echo "DPKG_ARCH=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
 
       - name: Run Tests
@@ -72,7 +71,7 @@ jobs:
 
   snapcraft-publish:
     runs-on: ubuntu-latest
-    if: ${{ contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name == 'main' }}
+    if: ${{ contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name == 'release/stable' }}
     needs: snapcraft-build
     strategy:
       matrix:
@@ -99,46 +98,4 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_LOGIN }}
         with:
           snap: ${{ steps.gather-filename.outputs.SNAP_PATH }}
-          release: edge
-
-  publish-coverage:
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' }}
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        id: checkout
-
-      - name: Install .NET
-        id: install-dotnet
-        run: |
-          sudo add-apt-repository --yes ppa:dotnet/previews
-          sudo add-apt-repository --yes ppa:dotnet/backports
-          sudo apt-get install --yes dotnet10
-
-      - name: Install reportgenerator tool
-        run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool
-
-      - name: Generate Coverage report
-        run: |
-          dotnet test --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory TestResults
-          reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:TestResults/Html/coverage -reporttypes:'Html'
-
-      - name: Commit Coverage files
-        run: |
-          cd TestResults/Html
-          git init
-          git add -A
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git commit -m 'deploy'
-
-      - name: Push to GH Pages branch
-        uses: ad-m/github-push-action@v0.8.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
-          force: true
-          directory: ./TestResults/Html
+          release: candidate

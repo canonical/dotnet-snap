@@ -19,6 +19,7 @@ public partial class ManifestService : IManifestService
     private List<Component> _remote = [];
     private List<Component> _merged = [];
     private bool _includeUnsupported = false;
+    private bool _includePrerelease = false;
 
     public string SnapConfigurationLocation => SnapConfigPath;
     public string DotnetInstallLocation =>
@@ -53,18 +54,17 @@ public partial class ManifestService : IManifestService
         private set => _merged = value.ToList();
     }
 
-    public Task Initialize(bool includeUnsupported = false, CancellationToken cancellationToken = default)
+    public Task Initialize(bool includeUnsupported = false, bool includePrerelease = false,
+        CancellationToken cancellationToken = default)
     {
         _includeUnsupported = includeUnsupported;
+        _includePrerelease = includePrerelease;
         return Refresh(cancellationToken);
     }
 
     public async Task Add(Component component, CancellationToken cancellationToken = default)
     {
-        component.Installation = new Installation
-        {
-            InstalledAt = DateTimeOffset.UtcNow
-        };
+        component.Installation = new Installation(DateTimeOffset.UtcNow);
         _local.Add(component);
         await Save(cancellationToken);
         await Refresh(cancellationToken);

@@ -49,9 +49,14 @@ public class ListCommand : Command
 
     private async Task Handle(bool includeUnsupported, uint timeoutInMilliseconds)
     {
+#if INCLUDE_PRERELEASE
+        const bool includePrerelease = true;
+#else
+        const bool includePrerelease = false;
+#endif
         try
         {
-            await _manifestService.Initialize(includeUnsupported);
+            await _manifestService.Initialize(includeUnsupported, includePrerelease);
 
             var table = new Table();
 
@@ -102,7 +107,13 @@ public class ListCommand : Command
                 string EndOfLifeStatus()
                 {
                     var endOfLife = majorVersionGroup.First().EndOfLife;
-                    var daysUntilEndOfLife = (endOfLife - DateTime.Now).TotalDays;
+
+                    if (endOfLife is null)
+                    {
+                        return "[grey]-[/]";
+                    }
+
+                    var daysUntilEndOfLife = (endOfLife.Value - DateTime.Now).TotalDays;
 
                     var eolString = $"[{(daysUntilEndOfLife <= 0d ? "bold red" : "green")}]{endOfLife:d}[/]";
 

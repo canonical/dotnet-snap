@@ -17,6 +17,7 @@ public class DependencyTreeTests
             MajorVersion = 8,
             Dependencies = [],
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 
@@ -28,6 +29,7 @@ public class DependencyTreeTests
             MajorVersion = 8,
             Dependencies = [ "key1" ],
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 
@@ -39,6 +41,7 @@ public class DependencyTreeTests
             MajorVersion = 8,
             Dependencies = [ "key2" ],
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 

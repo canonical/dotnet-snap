@@ -43,11 +43,16 @@ public class InstallCommand : Command
 
     private async Task Handle(string component, string version)
     {
+#if INCLUDE_PRERELEASE
+        const bool includePrerelease = true;
+#else
+        const bool includePrerelease = false;
+#endif
         try
         {
             if (Directory.Exists(_manifestService.DotnetInstallLocation))
             {
-                await _manifestService.Initialize(includeUnsupported: true);
+                await _manifestService.Initialize(includeUnsupported: true, includePrerelease);
 
                 var requestedComponent = _manifestService.MatchRemoteComponent(component, version);
 
