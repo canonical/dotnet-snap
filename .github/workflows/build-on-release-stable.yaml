@@ -55,6 +55,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         id: checkout
+        with:
+          ref: ${{ github.event.pull_request.head.sha || 'release/stable' }}
 
       - name: Retrieve Architecture
         id: get-arch
