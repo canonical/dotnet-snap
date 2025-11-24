@@ -28,8 +28,8 @@ jobs:
       - name: Install .NET
         id: install-dotnet
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes dotnet-sdk-8.0
+          sudo add-apt-repository --yes ppa:dotnet/backports
+          sudo apt-get install --yes dotnet10
           echo "DPKG_ARCH=$(dpkg --print-architecture)" >> "$GITHUB_OUTPUT"
 
       - name: Run Tests
