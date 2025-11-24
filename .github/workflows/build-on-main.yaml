@@ -124,7 +124,7 @@ jobs:
       - name: Generate Coverage report
         run: |
           dotnet test --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory TestResults
-          reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:TestResults/Html/coverage -reporttypes:'Html'
+          ${HOME}/.dotnet/tools/reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:TestResults/Html/coverage -reporttypes:'Html'
 
       - name: Commit Coverage files
         run: |
