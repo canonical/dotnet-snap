@@ -12,7 +12,6 @@ description: |
   multiple versions of .NET side-by-side as you want, as well as receive
   monthly security and feature updates whenever they become available.
 
-grade: devel
 confinement: classic
 
 package-repositories:
@@ -46,6 +45,10 @@ parts:
       if [ "$git_branch" != "release/stable" ]; then
         echo "On a non-stable branch, enabling prerelease versions"
         include_prerelease=true
+        craftctl set grade=devel
+      else
+        echo "On stable branch, building stable release"
+        craftctl set grade=stable
       fi
 
       SNAP_VERSION=$(/usr/bin/dotnet --list-runtimes | grep NETCore.App | awk '{print $2}' | sort -r | head -n 1)
