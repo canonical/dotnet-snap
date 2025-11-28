@@ -32,15 +32,3 @@ find /usr/lib/systemd/system/ -type f -name 'aspnetcore-*-update-watcher.*' | wh
 done
 
 systemctl daemon-reload
-
-##################################
-# Remove left-over content snaps #
-##################################
-
-for snap in $(snap list | awk '{print $1}' | grep '^dotnet-.*'); do
-    snap remove --purge "$snap"
-done
-# Remove left-over aspnetcore-* content snaps
-for snap in $(snap list | awk '{print $1}' | grep '^aspnetcore-.*'); do
-    snap remove --purge "$snap"
-done

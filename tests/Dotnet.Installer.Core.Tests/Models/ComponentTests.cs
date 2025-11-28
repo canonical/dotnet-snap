@@ -20,6 +20,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 
@@ -28,7 +29,7 @@ public class ComponentTests
         var snapService = new Mock<ISnapService>();
         var systemDService = new Mock<ISystemdService>();
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<SnapChannel>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
@@ -64,6 +65,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 
@@ -72,7 +74,7 @@ public class ComponentTests
         var snapService = new Mock<ISnapService>();
         var systemDService = new Mock<ISystemdService>();
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<SnapChannel>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
@@ -109,6 +111,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
         var component2 = new Component
@@ -119,6 +122,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
         var component3 = new Component
@@ -129,6 +133,7 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now
         };
 
@@ -145,7 +150,7 @@ public class ComponentTests
                 installedComponents.Add(c.Key);
             });
 
-        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<bool>(), CancellationToken.None))
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<SnapChannel>(), CancellationToken.None))
             .ReturnsAsync(new Terminal.InvocationResult(
                 exitCode: 0, standardOutput: string.Empty, standardError: string.Empty));
 
@@ -177,11 +182,9 @@ public class ComponentTests
             Name = "name",
             MajorVersion = 8,
             IsLts = false,
+            Grade = Grade.Rtm,
             EndOfLife = DateTime.Now,
-            Installation = new Installation
-            {
-                InstalledAt = new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3))
-            }
+            Installation = new Installation(new DateTimeOffset(2024, 3, 19, 19, 3, 0, TimeSpan.FromHours(-3)))
         };
 
         var fileService = new Mock<IFileService>();

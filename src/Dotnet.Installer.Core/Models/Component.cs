@@ -5,6 +5,13 @@ using Dotnet.Installer.Core.Services.Contracts;
 
 namespace Dotnet.Installer.Core.Models;
 
+public enum Grade
+{
+    Rtm,
+    Rc,
+    Preview
+}
+
 public class Component
 {
     public required string Key { get; init; }
@@ -12,8 +19,13 @@ public class Component
     public required string Description { get; init; }
     public required int MajorVersion { get; init; }
     public required bool IsLts { get; init; }
-    [JsonPropertyName("eol")]
-    public required DateTime EndOfLife { get; init; }
+    // NOTE: This property needs a default value to ensure backward compatibility with existing manifests
+    // that might not have this field set. New manifests should always include this field.
+    // 'Grade' was introduced when preview versions of .NET started being made available, therefore it is safe
+    // to assume that entries without this field are RTM.
+    [JsonConverter(typeof(JsonStringEnumConverter<Grade>))]
+    public Grade Grade { get; init; } = Grade.Rtm;
+    [JsonPropertyName("eol")] public DateTime? EndOfLife { get; init; }
     public required IEnumerable<string> Dependencies { get; init; }
     public Installation? Installation { get; set; }
     public bool IsInstalled => Installation is not null;
@@ -35,7 +47,18 @@ public class Component
         // Install content snap on the machine
         if (!snapService.IsSnapInstalled(Key))
         {
-            var result = await snapService.Install(Key);
+            // Gather highest channel available
+            var snapInfo = await snapService.FindSnap(Key);
+
+            var channel = snapInfo?.Channel switch
+            {
+                "candidate" => SnapChannel.Candidate,
+                "beta" => SnapChannel.Beta,
+                "edge" => SnapChannel.Edge,
+                _ => SnapChannel.Stable
+            };
+
+            var result = await snapService.Install(Key, channel);
             if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
         }
 

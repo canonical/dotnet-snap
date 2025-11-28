@@ -12,7 +12,6 @@ description: |
   multiple versions of .NET side-by-side as you want, as well as receive
   monthly security and feature updates whenever they become available.
 
-grade: stable
 confinement: classic
 
 package-repositories:
@@ -31,7 +30,7 @@ parts:
     plugin: dump
     source: .
     build-packages:
-      - dotnet-sdk-9.0
+      - dotnet-sdk-10.0
       - patchelf
     stage-packages:
       - jq
@@ -40,6 +39,18 @@ parts:
       - enable-patchelf
     override-build: |
       /usr/bin/dotnet --info
+
+      include_prerelease=false
+      git_branch=$(git rev-parse --abbrev-ref HEAD)
+      if [ "$git_branch" != "release/stable" ]; then
+        echo "On a non-stable branch, enabling prerelease versions"
+        include_prerelease=true
+        craftctl set grade=devel
+      else
+        echo "On stable branch, building stable release"
+        craftctl set grade=stable
+      fi
+
       SNAP_VERSION=$(/usr/bin/dotnet --list-runtimes | grep NETCore.App | awk '{print $2}' | sort -r | head -n 1)
       craftctl set version="$SNAP_VERSION"
 
@@ -53,7 +64,8 @@ parts:
       fi
 
       /usr/bin/dotnet publish src/Dotnet.Installer.Console --output "${CRAFT_PART_INSTALL}" \
-        --configuration Release -r "${RUNTIME_RID}" -p:DebugSymbols=false -p:DebugType=none
+        --configuration Release --self-contained true -r "${RUNTIME_RID}" \
+        -p:DebugSymbols=false -p:DebugType=none -p:PublishSingleFile=true -p:IncludePrerelease=${include_prerelease}
       chmod 555 "${CRAFT_PART_INSTALL}/Dotnet.Installer.Console"
 
       patchelf --force-rpath --set-rpath \
@@ -66,7 +78,7 @@ parts:
     build-packages:
       - patchelf
     stage-packages:
-      - dotnet-hostfxr-9.0
+      - dotnet-hostfxr-10.0
     override-build: |
       DOTNET_VERSION=$(craftctl get version)
       INTERPRETER=$(find /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR} -type f -name ld-linux** | head -n 1)
@@ -77,11 +89,6 @@ parts:
       patchelf --force-rpath --set-rpath \
         /snap/dotnet/current/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:/snap/core22/current/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR} \
         ${CRAFT_PART_INSTALL}/usr/lib/dotnet/host/fxr/${DOTNET_VERSION}/libhostfxr.so
-
-  netstandard-targeting-pack:
-    plugin: nil
-    stage-packages:
-      - netstandard-targeting-pack-2.1-9.0
 
 apps:
   dotnet:

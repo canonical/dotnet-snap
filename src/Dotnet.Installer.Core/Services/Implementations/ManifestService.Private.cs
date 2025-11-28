@@ -23,17 +23,24 @@ public partial class ManifestService
         return result ?? [];
     }
 
-    private static async Task<List<Component>> LoadRemote(bool includeUnsupported = false,
+    private static async Task<List<Component>> LoadRemote(bool includeUnsupported = false, bool includePrerelease = false,
         CancellationToken cancellationToken = default)
     {
+        var manifestSnapRootPath = Path.Join("/", "snap", "dotnet-manifest", "current");
+
         var filesToRead = new List<string>
         {
-            Path.Join("/", "snap", "dotnet-manifest", "current", "supported.json")
+            Path.Join(manifestSnapRootPath, "supported.json")
         };
 
         if (includeUnsupported)
         {
-            filesToRead.Add(Path.Join("/", "snap", "dotnet-manifest", "current", "unsupported.json"));
+            filesToRead.Add(Path.Join(manifestSnapRootPath, "unsupported.json"));
+        }
+
+        if (includePrerelease)
+        {
+            filesToRead.Add(Path.Join(manifestSnapRootPath, "previews.json"));
         }
 
         var components = new List<Component>();
@@ -44,10 +51,9 @@ public partial class ManifestService
                 JsonSerializerOptions,
                 cancellationToken: cancellationToken);
 
-            if (currentComponents is not null)
-            {
-                components.AddRange(currentComponents);
-            }
+            if (currentComponents is null) continue;
+
+            components.AddRange(currentComponents);
         }
 
         return components;
@@ -56,11 +62,11 @@ public partial class ManifestService
     private async Task Refresh(CancellationToken cancellationToken = default)
     {
         _local = await LoadLocal(cancellationToken);
-        _remote = await LoadRemote(_includeUnsupported, cancellationToken);
-        _merged = Merge(_remote, _local);
+        _remote = await LoadRemote(_includeUnsupported, _includePrerelease, cancellationToken);
+        _merged = MergeManifests(_remote, _local);
     }
 
-    private static List<Component> Merge(List<Component> remoteComponents, List<Component> localComponents)
+    private static List<Component> MergeManifests(List<Component> remoteComponents, List<Component> localComponents)
     {
         var result = new List<Component>();
         result.AddRange(remoteComponents);
@@ -69,10 +75,12 @@ public partial class ManifestService
         {
             if (result.All(c => c.Key != localComponent.Key))
             {
+                // Local component is not in remote, add it
                 result.Add(localComponent);
             }
             else
             {
+                // Local component exists in remote. Take it as source of truth and update installation info
                 var remote = result.First(c => c.Key == localComponent.Key);
                 remote.Installation = localComponent.Installation;
             }
