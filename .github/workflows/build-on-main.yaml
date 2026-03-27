@@ -20,7 +20,7 @@ jobs:
           - [self-hosted, large, jammy, ARM64]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         id: checkout
 
       - name: Install .NET
@@ -52,7 +52,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: unit-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         id: checkout
 
       - name: Retrieve Architecture
@@ -80,7 +80,7 @@ jobs:
           - dotnet-amd64
           - dotnet-arm64
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         id: download-artifact
         with:
           name: ${{ matrix.artifact-name }}
@@ -107,7 +107,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         id: checkout
 
       - name: Install .NET
@@ -136,7 +136,7 @@ jobs:
           git commit -m 'deploy'
 
       - name: Push to GH Pages branch
-        uses: ad-m/github-push-action@v0.8.0
+        uses: ad-m/github-push-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages

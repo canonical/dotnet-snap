@@ -20,7 +20,7 @@ jobs:
           - [self-hosted, large, jammy, ARM64]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         id: checkout
         with:
           ref: ${{ github.event.pull_request.head.sha || 'release/stable' }}
@@ -53,7 +53,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: unit-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         id: checkout
         with:
           ref: ${{ github.event.pull_request.head.sha || 'release/stable' }}
@@ -83,7 +83,7 @@ jobs:
           - dotnet-amd64
           - dotnet-arm64
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         id: download-artifact
         with:
           name: ${{ matrix.artifact-name }}
