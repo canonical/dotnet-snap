@@ -48,8 +48,8 @@ public class Component
         // and throw, preventing this component from being registered as installed.
         foreach (var dependencyKey in Dependencies)
         {
-            var dependency = manifestService.Remote.FirstOrDefault(c => c.Key == dependencyKey) ?? throw new ApplicationException(
-                    $"Dependency {dependencyKey} for component {Key} was not found in the remote manifest.");
+            var dependency = manifestService.Merged.FirstOrDefault(c => c.Key == dependencyKey) ?? throw new ApplicationException(
+                    $"Dependency {dependencyKey} for component {Key} was not found in the manifest.");
             await dependency.Install(fileService, manifestService, snapService, systemdService, logger);
         }
 
@@ -77,7 +77,8 @@ public class Component
             }
 
             // Place linking file in the content snap's $SNAP_COMMON
-            transaction.MarkLinkageFilePlacementAttempted();
+            var linkageFileExistedBeforePlacement = fileService.FileExists(Path.Join("/", "var", "snap", Key, "common", "dotnet-installer"));
+            transaction.MarkLinkageFilePlacementAttempted(linkageFileExistedBeforePlacement);
             await fileService.PlaceLinkageFile(Key);
 
             // Install Systemd mount units
@@ -128,18 +129,23 @@ public class Component
         ISystemdService systemdService, ILogger? logger = default)
     {
         var units = new StringBuilder();
-        var unitPaths = fileService.EnumerateContentSnapMountFiles(Key);
+        var unitPaths = fileService.EnumerateContentSnapMountFiles(Key).ToList();
+
+        foreach (var unitPath in unitPaths)
+        {
+            units.AppendLine(unitPath.Split('/').Last());
+        }
+
+        // Save unit names before copying files so that, if any later step fails,
+        // rollback can use this tracker to remove any partially-copied units.
+        await fileService.PlaceUnitsFile(manifestService.SnapConfigurationLocation, contentSnapName: Key,
+            units.ToString());
 
         foreach (var unitPath in unitPaths)
         {
             logger?.LogDebug($"Copying {unitPath} to systemd directory.");
             fileService.InstallSystemdMountUnit(unitPath);
-            units.AppendLine(unitPath.Split('/').Last());
         }
-
-        // Save unit names to component .mounts file
-        await fileService.PlaceUnitsFile(manifestService.SnapConfigurationLocation, contentSnapName: Key,
-            units.ToString());
 
         var result = await systemdService.DaemonReload();
         if (!result.IsSuccess)

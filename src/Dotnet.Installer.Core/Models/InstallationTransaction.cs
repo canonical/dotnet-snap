@@ -14,6 +14,7 @@ public class InstallationTransaction(string componentKey)
     private bool _mountUnitsPlacementAttempted;
     private bool _pathUnitsPlacementAttempted;
     private bool _linkageFilePlacementAttempted;
+    private bool _linkageFileExistedBeforePlacement;
 
     /// <summary>
     /// Marks that the content snap installation was attempted. If the installation fails,
@@ -26,11 +27,16 @@ public class InstallationTransaction(string componentKey)
 
     /// <summary>
     /// Marks that the linkage file placement was attempted. If the placement fails,
-    /// rollback will try to remove the linkage file if it is present.
+    /// rollback will try to remove the linkage file only if it was created during this transaction.
     /// </summary>
-    public void MarkLinkageFilePlacementAttempted()
+    /// <param name="existedBeforePlacement">
+    /// <see langword="true"/> if the linkage file already existed before the current installation attempt;
+    /// <see langword="false"/> if this transaction created it.
+    /// </param>
+    public void MarkLinkageFilePlacementAttempted(bool existedBeforePlacement)
     {
         _linkageFilePlacementAttempted = true;
+        _linkageFileExistedBeforePlacement = existedBeforePlacement;
     }
 
     /// <summary>
@@ -99,7 +105,7 @@ public class InstallationTransaction(string componentKey)
             }
         }
 
-        if (_linkageFilePlacementAttempted)
+        if (_linkageFilePlacementAttempted && !_linkageFileExistedBeforePlacement)
         {
             try
             {

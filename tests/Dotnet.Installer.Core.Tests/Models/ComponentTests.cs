@@ -143,6 +143,7 @@ public class ComponentTests
         var systemDService = new Mock<ISystemdService>();
 
         manifestService.Setup(s => s.Remote).Returns([component1, component2, component3]);
+        manifestService.Setup(s => s.Merged).Returns([component1, component2, component3]);
         manifestService.Setup(e => e.Add(
                 It.IsAny<Component>(), CancellationToken.None))
             .Callback((Component c, CancellationToken cancellationToken) =>
