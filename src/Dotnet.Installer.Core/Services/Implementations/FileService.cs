@@ -78,6 +78,20 @@ public class FileService : IFileService
             Encoding.UTF8);
     }
 
+    /// <summary>
+    /// Removes the linkage file that marks that a .NET content snap is being tracked by the
+    /// .NET installer tool.
+    /// </summary>
+    /// <param name="contentSnapName">The name of the .NET content snap.</param>
+    public void RemoveLinkageFile(string contentSnapName)
+    {
+        var path = Path.Join("/", "var", "snap", contentSnapName, "common", "dotnet-installer");
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
     public Task PlaceUnitsFile(string snapConfigDirLocation, string contentSnapName, string units)
     {
         var mountsFileName = $"{contentSnapName}.mounts";

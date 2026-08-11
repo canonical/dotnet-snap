@@ -218,4 +218,219 @@ public class ComponentTests
         Assert.False(component1.IsInstalled);
         Assert.Empty(installedComponents);
     }
+
+    [Fact]
+    public async Task Install_WithDependencyFailure_ShouldNotAddParentToManifest()
+    {
+        // Arrange
+        var parent = new Component
+        {
+            Dependencies = ["dep1"],
+            Description = "Parent",
+            Key = "parent",
+            Name = "name",
+            MajorVersion = 8,
+            IsLts = false,
+            Grade = Grade.Rtm,
+            EndOfLife = DateTime.Now
+        };
+
+        var dependency = new Component
+        {
+            Dependencies = [],
+            Description = "Dependency",
+            Key = "dep1",
+            Name = "name",
+            MajorVersion = 8,
+            IsLts = false,
+            Grade = Grade.Rtm,
+            EndOfLife = DateTime.Now
+        };
+
+        var fileService = new Mock<IFileService>();
+        var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemdService>();
+
+        manifestService.Setup(s => s.Remote).Returns([parent, dependency]);
+
+        snapService.Setup(s => s.Install(It.IsAny<string>(), It.IsAny<SnapChannel>(), CancellationToken.None))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+
+        // Make the dependency fail when installing its mount units
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(() => new Terminal.InvocationResult(1, string.Empty, "daemon reload failed"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ApplicationException>(() =>
+            parent.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object));
+
+        manifestService.Verify(m => m.Add(parent, CancellationToken.None), Times.Never);
+    }
+
+    [Fact]
+    public async Task Install_WhenMountUnitsFail_ShouldRollbackSnapInstall()
+    {
+        // Arrange
+        var component = new Component
+        {
+            Dependencies = [],
+            Description = "Component",
+            Key = "dotnet-sdk-80",
+            Name = "sdk",
+            MajorVersion = 8,
+            IsLts = false,
+            Grade = Grade.Rtm,
+            EndOfLife = DateTime.Now
+        };
+
+        var fileService = new Mock<IFileService>();
+        var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemdService>();
+
+        snapService.SetupSequence(s => s.IsSnapInstalled(component.Key))
+            .Returns(false)
+            .Returns(true);
+        snapService.Setup(s => s.Install(component.Key, It.IsAny<SnapChannel>(), CancellationToken.None))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        snapService.Setup(s => s.FindSnap(component.Key, CancellationToken.None))
+            .ReturnsAsync(new SnapInfo(component.Key, "8.0.0", "1", "stable", new SnapPublisher("id", "dotnet", ".NET", "verified")));
+
+        fileService.Setup(f => f.EnumerateContentSnapMountFiles(component.Key))
+            .Returns(["/snap/dotnet-sdk-80/current/mounts/unit.mount"]);
+        fileService.Setup(f => f.ReadUnitsFile(It.IsAny<string>(), component.Key))
+            .ReturnsAsync(["unit.mount"]);
+
+        // Fail daemon-reload so PlaceMountUnits throws
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new Terminal.InvocationResult(1, string.Empty, "daemon reload failed"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ApplicationException>(() =>
+            component.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object));
+
+        manifestService.Verify(m => m.Add(component, CancellationToken.None), Times.Never);
+        snapService.Verify(s => s.Remove(component.Key, true, CancellationToken.None), Times.Once);
+        fileService.Verify(f => f.PlaceLinkageFile(component.Key), Times.Once);
+        fileService.Verify(f => f.RemoveLinkageFile(component.Key), Times.Once);
+    }
+
+    [Fact]
+    public async Task Install_WhenPathUnitsFail_ShouldRollbackMountUnitsAndSnap()
+    {
+        // Arrange
+        var component = new Component
+        {
+            Dependencies = [],
+            Description = "Component",
+            Key = "dotnet-sdk-80",
+            Name = "sdk",
+            MajorVersion = 8,
+            IsLts = false,
+            Grade = Grade.Rtm,
+            EndOfLife = DateTime.Now
+        };
+
+        var fileService = new Mock<IFileService>();
+        var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemdService>();
+
+        snapService.SetupSequence(s => s.IsSnapInstalled(component.Key))
+            .Returns(false)
+            .Returns(true);
+        snapService.Setup(s => s.Install(component.Key, It.IsAny<SnapChannel>(), CancellationToken.None))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        snapService.Setup(s => s.FindSnap(component.Key, CancellationToken.None))
+            .ReturnsAsync(new SnapInfo(component.Key, "8.0.0", "1", "stable", new SnapPublisher("id", "dotnet", ".NET", "verified")));
+
+        fileService.Setup(f => f.EnumerateContentSnapMountFiles(component.Key))
+            .Returns(["/snap/dotnet-sdk-80/current/mounts/unit.mount"]);
+        fileService.Setup(f => f.ReadUnitsFile(It.IsAny<string>(), component.Key))
+            .ReturnsAsync(["unit.mount"]);
+
+        // Succeed mount units
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+
+        // Fail path unit enable
+        systemDService.Setup(s => s.EnableUnit($"{component.Key}-update-watcher.path"))
+            .ReturnsAsync(new Terminal.InvocationResult(1, string.Empty, "enable failed"));
+        systemDService.Setup(s => s.DisableUnit($"{component.Key}-update-watcher.path"))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StopUnit($"{component.Key}-update-watcher.path"))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ApplicationException>(() =>
+            component.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object));
+
+        manifestService.Verify(m => m.Add(component, CancellationToken.None), Times.Never);
+        snapService.Verify(s => s.Remove(component.Key, true, CancellationToken.None), Times.Once);
+        fileService.Verify(f => f.PlaceLinkageFile(component.Key), Times.Once);
+        fileService.Verify(f => f.RemoveLinkageFile(component.Key), Times.Once);
+        fileService.Verify(f => f.UninstallSystemdPathUnit(component.Key), Times.Once);
+    }
+
+    [Fact]
+    public async Task Install_WhenManifestAddFails_ShouldRollbackAllInstallationSteps()
+    {
+        // Arrange
+        var component = new Component
+        {
+            Dependencies = [],
+            Description = "Component",
+            Key = "dotnet-sdk-80",
+            Name = "sdk",
+            MajorVersion = 8,
+            IsLts = false,
+            Grade = Grade.Rtm,
+            EndOfLife = DateTime.Now
+        };
+
+        var fileService = new Mock<IFileService>();
+        var manifestService = new Mock<IManifestService>();
+        var snapService = new Mock<ISnapService>();
+        var systemDService = new Mock<ISystemdService>();
+
+        snapService.SetupSequence(s => s.IsSnapInstalled(component.Key))
+            .Returns(false)
+            .Returns(true);
+        snapService.Setup(s => s.Install(component.Key, It.IsAny<SnapChannel>(), CancellationToken.None))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        snapService.Setup(s => s.FindSnap(component.Key, CancellationToken.None))
+            .ReturnsAsync(new SnapInfo(component.Key, "8.0.0", "1", "stable", new SnapPublisher("id", "dotnet", ".NET", "verified")));
+
+        fileService.Setup(f => f.EnumerateContentSnapMountFiles(component.Key))
+            .Returns(["/snap/dotnet-sdk-80/current/mounts/unit.mount"]);
+        fileService.Setup(f => f.ReadUnitsFile(It.IsAny<string>(), component.Key))
+            .ReturnsAsync(["unit.mount"]);
+
+        systemDService.Setup(s => s.DaemonReload())
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        systemDService.Setup(s => s.EnableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StartUnit(It.IsAny<string>()))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        systemDService.Setup(s => s.DisableUnit(It.IsAny<string>()))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+        systemDService.Setup(s => s.StopUnit(It.IsAny<string>()))
+            .ReturnsAsync(new Terminal.InvocationResult(0, string.Empty, string.Empty));
+
+        manifestService.Setup(m => m.Add(component, CancellationToken.None))
+            .ThrowsAsync(new ApplicationException("manifest write failed"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ApplicationException>(() =>
+            component.Install(fileService.Object, manifestService.Object, snapService.Object, systemDService.Object));
+
+        snapService.Verify(s => s.Remove(component.Key, true, CancellationToken.None), Times.Once);
+        fileService.Verify(f => f.RemoveLinkageFile(component.Key), Times.Once);
+        fileService.Verify(f => f.UninstallSystemdPathUnit(component.Key), Times.Once);
+    }
 }

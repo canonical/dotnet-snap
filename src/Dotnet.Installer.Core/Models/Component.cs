@@ -44,40 +44,60 @@ public class Component
 
         InstallationStarted?.Invoke(this, new InstallationStartedEventArgs(Key));
 
-        // Install content snap on the machine
-        if (!snapService.IsSnapInstalled(Key))
+        // Install dependencies first. If a dependency fails, it will roll itself back
+        // and throw, preventing this component from being registered as installed.
+        foreach (var dependencyKey in Dependencies)
         {
-            // Gather highest channel available
-            var snapInfo = await snapService.FindSnap(Key);
-
-            var channel = snapInfo?.Channel switch
-            {
-                "candidate" => SnapChannel.Candidate,
-                "beta" => SnapChannel.Beta,
-                "edge" => SnapChannel.Edge,
-                _ => SnapChannel.Stable
-            };
-
-            var result = await snapService.Install(Key, channel);
-            if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
+            var dependency = manifestService.Remote.FirstOrDefault(c => c.Key == dependencyKey) ?? throw new ApplicationException(
+                    $"Dependency {dependencyKey} for component {Key} was not found in the remote manifest.");
+            await dependency.Install(fileService, manifestService, snapService, systemdService, logger);
         }
 
-        // Place linking file in the content snap's $SNAP_COMMON
-        await fileService.PlaceLinkageFile(Key);
+        var transaction = new InstallationTransaction(Key);
 
-        // Install Systemd mount units
-        await PlaceMountUnits(fileService, manifestService, systemdService, logger);
-
-        // Install update watcher unit
-        await PlacePathUnits(fileService, systemdService, logger);
-
-        // Register the installation of this component in the local manifest file
-        await manifestService.Add(this);
-
-        foreach (var dependency in Dependencies)
+        try
         {
-            var component = manifestService.Remote.First(c => c.Key == dependency);
-            await component.Install(fileService, manifestService, snapService, systemdService, logger);
+            // Install content snap on the machine
+            if (!snapService.IsSnapInstalled(Key))
+            {
+                // Gather highest channel available
+                var snapInfo = await snapService.FindSnap(Key);
+
+                var channel = snapInfo?.Channel switch
+                {
+                    "candidate" => SnapChannel.Candidate,
+                    "beta" => SnapChannel.Beta,
+                    "edge" => SnapChannel.Edge,
+                    _ => SnapChannel.Stable
+                };
+
+                transaction.MarkSnapInstallAttempted();
+                var result = await snapService.Install(Key, channel);
+                if (!result.IsSuccess) throw new ApplicationException(result.StandardError);
+            }
+
+            // Place linking file in the content snap's $SNAP_COMMON
+            transaction.MarkLinkageFilePlacementAttempted();
+            await fileService.PlaceLinkageFile(Key);
+
+            // Install Systemd mount units
+            transaction.MarkMountUnitsPlacementAttempted();
+            await PlaceMountUnits(fileService, manifestService, systemdService, logger);
+
+            // Install update watcher unit
+            transaction.MarkPathUnitsPlacementAttempted();
+            await PlacePathUnits(fileService, systemdService, logger);
+
+            // Register the installation of this component in the local manifest file
+            // only after all installation steps have succeeded.
+            await manifestService.Add(this);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError($"Installation of {Key} failed: {ex.Message}");
+            logger?.LogError("Rolling back changes...");
+            await transaction.Rollback(fileService, manifestService, snapService, systemdService, logger);
+            throw;
         }
 
         InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
@@ -231,7 +251,7 @@ public class Component
         logger?.LogDebug($"Started {Key}-update-watcher.path");
     }
 
-    private async Task RemovePathUnits(IFileService fileService, ISystemdService systemdService,
+    internal async Task RemovePathUnits(IFileService fileService, ISystemdService systemdService,
         ILogger? logger = default)
     {
         var result = await systemdService.DisableUnit($"{Key}-update-watcher.path");
