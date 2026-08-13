@@ -28,6 +28,8 @@ public static class Terminal
         process.Start();
         await process.WaitForExitAsync();
 
+        // ponytail: streams are read after WaitForExit; deadlocks if a child fills the
+        // 64KB pipe buffer on a redirected stream. Read concurrently if that ever happens.
         return new InvocationResult
         {
             ExitCode = process.ExitCode,

@@ -80,6 +80,7 @@ public class Component
             await component.Install(fileService, manifestService, snapService, systemdService, logger);
         }
 
+        logger?.LogInformation($"{Description} installed successfully.");
         InstallationFinished?.Invoke(this, new InstallationFinishedEventArgs(Key));
     }
 

@@ -91,42 +91,13 @@ public class ListCommand : Command
                     var component = majorVersionGroup.FirstOrDefault(
                         c => c.Name == name && c.MajorVersion == majorVersionGroup.Key);
 
-                    if (component is null)
-                    {
-                        return "[grey]-[/]";
-                    }
-
-                    var status = component.IsInstalled ? "[green][bold]Installed[/]" : "[blue][bold]Available[/]";
-
-                    var version = componentVersions[component.Key];
-                    status += version is null ? "[/]" : $" [[{version}]][/]";
-
-                    return status;
+                    return component is null ? "[grey]-[/]" : OutputFormat.Status(component, componentVersions[component.Key]);
                 }
 
                 string EndOfLifeStatus()
                 {
-                    var endOfLife = majorVersionGroup.First().EndOfLife;
-
-                    if (endOfLife is null)
-                    {
-                        return "[grey]-[/]";
-                    }
-
-                    var daysUntilEndOfLife = (endOfLife.Value - DateTime.Now).TotalDays;
-
-                    var eolString = $"[{(daysUntilEndOfLife <= 0d ? "bold red" : "green")}]{endOfLife:d}[/]";
-
-                    if (majorVersionGroup.Any(c => c.IsInstalled) && daysUntilEndOfLife is < 30d and > 0d)
-                    {
-                        eolString += $" [bold yellow]({daysUntilEndOfLife:N0} days left)[/]";
-                    }
-                    else if (daysUntilEndOfLife is < 90d and > 0d)
-                    {
-                        eolString += $" ({daysUntilEndOfLife:N0} days left)";
-                    }
-
-                    return eolString;
+                    var component = majorVersionGroup.First();
+                    return OutputFormat.Eol(component, majorVersionGroup.Any(c => c.IsInstalled));
                 }
             }
 
