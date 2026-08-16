@@ -33,7 +33,7 @@ public partial class SnapService : ISnapService
         }
         arguments.Add(name);
 
-        return Terminal.Invoke("snap", new Terminal.InvocationOptions { RedirectStandardError = true }, arguments.ToArray());
+        return Terminal.Invoke("snap", arguments.ToArray());
     }
 
     public Task<Terminal.InvocationResult> Remove(string name, bool purge = false, CancellationToken cancellationToken = default)
@@ -46,7 +46,7 @@ public partial class SnapService : ISnapService
         if (purge) arguments.Add("--purge");
         arguments.Add(name);
 
-        return Terminal.Invoke("snap", new Terminal.InvocationOptions { RedirectStandardError = true }, arguments.ToArray());
+        return Terminal.Invoke("snap", arguments.ToArray());
     }
 
     public Task<IImmutableList<SnapInfo>> GetInstalledSnaps(CancellationToken cancellationToken = default)
