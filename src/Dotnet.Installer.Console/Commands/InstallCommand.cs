@@ -58,7 +58,9 @@ public class InstallCommand : Command
 
                 if (requestedComponent is null)
                 {
-                    _logger.LogError($"The requested component {component} {version} does not exist.");
+                    _logger.LogError($"The requested component '{component} {version}' does not exist. " +
+                                    "Valid components are: runtime, aspnetcore-runtime, sdk. " +
+                                    "Example: dotnet installer install sdk lts");
                     Environment.Exit(-1);
                 }
 
