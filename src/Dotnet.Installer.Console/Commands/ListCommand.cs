@@ -32,6 +32,20 @@ public class ListCommand : Command
                 IsRequired = false
             };
 
+        var installedOption = new Option<bool>(
+            name: "--installed",
+            description: "Show only installed components.")
+            {
+                IsRequired = false
+            };
+
+        var ltsOption = new Option<bool>(
+            name: "--lts",
+            description: "Show only LTS components.")
+            {
+                IsRequired = false
+            };
+
         var timeoutOption = new Option<uint>(
             name: "--timeout",
             description: "The timeout for requesting the version of a .NET component " +
@@ -42,12 +56,14 @@ public class ListCommand : Command
         };
 
         AddOption(includeUnsupportedOption);
+        AddOption(installedOption);
+        AddOption(ltsOption);
         AddOption(timeoutOption);
 
-        this.SetHandler(Handle, includeUnsupportedOption, timeoutOption);
+        this.SetHandler(Handle, includeUnsupportedOption, installedOption, ltsOption, timeoutOption);
     }
 
-    private async Task Handle(bool includeUnsupported, uint timeoutInMilliseconds)
+    private async Task Handle(bool includeUnsupported, bool installedOnly, bool ltsOnly, uint timeoutInMilliseconds)
     {
 #if INCLUDE_PRERELEASE
         const bool includePrerelease = true;
@@ -58,6 +74,21 @@ public class ListCommand : Command
         {
             await _manifestService.Initialize(includeUnsupported, includePrerelease);
 
+            var components = installedOnly
+                ? _manifestService.Local.ToList()
+                : _manifestService.Merged.ToList();
+
+            if (ltsOnly) components = components.Where(c => c.IsLts).ToList();
+
+            if (components.Count == 0)
+            {
+                var message = installedOnly
+                    ? "You don't have any .NET components installed. Run 'dotnet installer install sdk lts' to install the latest LTS SDK."
+                    : "No .NET components found.";
+                AnsiConsole.WriteLine(message);
+                return;
+            }
+
             var table = new Table();
 
             table.AddColumn(new TableColumn("Version"));
@@ -66,7 +97,6 @@ public class ListCommand : Command
             table.AddColumn(new TableColumn("SDK"));
             table.AddColumn(new TableColumn("End of Life"));
 
-            var components = _manifestService.Merged.ToList();
             var componentVersions = await GetComponentVersions(components, timeoutInMilliseconds).ConfigureAwait(false);
 
             foreach (var majorVersionGroup in components

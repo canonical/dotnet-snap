@@ -39,8 +39,7 @@ class Program
             new ListCommand(fileService, manifestService, snapService, logger),
             new InstallCommand(fileService, manifestService, snapService, systemDService, logger),
             new RemoveCommand(fileService, manifestService, snapService, systemDService, logger),
-            new InfoCommand(manifestService, snapService, logger),
-            new SearchCommand(manifestService, logger)
+            new InfoCommand(manifestService, snapService, logger)
         };
 
         var verboseOption = new Option<bool>("--verbose", "Enables debug output level verbosity.");

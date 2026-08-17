@@ -63,7 +63,7 @@ public class InfoCommand : Command
 
             RenderInfo(component, installed, actualVersion, channel);
             RenderDependencies(component);
-            RenderReverseDependencies(component.Key);
+            if (installed) RenderReverseDependencies(component.Key);
         }
         catch (ApplicationException ex)
         {
