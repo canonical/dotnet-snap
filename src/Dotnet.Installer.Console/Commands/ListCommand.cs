@@ -82,9 +82,13 @@ public class ListCommand : Command
 
             if (components.Count == 0)
             {
-                var message = installedOnly
-                    ? "You don't have any .NET components installed. Run 'dotnet installer install sdk lts' to install the latest LTS SDK."
-                    : "No .NET components found.";
+                var message = (installedOnly, ltsOnly) switch
+                {
+                    (true, true) => "You don't have any LTS .NET components installed. Run 'dotnet installer install sdk lts' to install the latest LTS SDK.",
+                    (true, false) => "You don't have any .NET components installed. Run 'dotnet installer install sdk lts' to install the latest LTS SDK.",
+                    (false, true) => "No LTS .NET components found.",
+                    _ => "No .NET components found."
+                };
                 AnsiConsole.WriteLine(message);
                 return;
             }

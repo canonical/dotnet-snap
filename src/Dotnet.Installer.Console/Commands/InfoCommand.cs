@@ -25,12 +25,16 @@ public class InfoCommand : Command
 
         var componentArgument = new Argument<string>(
             name: "component",
-            description: "The .NET component name ('runtime', 'aspnetcore-runtime', 'sdk').",
-            getDefaultValue: () => "sdk");
+            description: "The .NET component name ('runtime', 'aspnetcore-runtime', 'sdk').")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
         var versionArgument = new Argument<string>(
             name: "version",
-            description: "The .NET component version (e.g. '8' or '8.0'), lts, latest.",
-            getDefaultValue: () => "latest");
+            description: "The .NET component version (e.g. '8' or '8.0'), lts, latest.")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
         AddArgument(componentArgument);
         AddArgument(versionArgument);
@@ -38,8 +42,27 @@ public class InfoCommand : Command
         this.SetHandler(Handle, componentArgument, versionArgument);
     }
 
-    private async Task Handle(string componentName, string version)
+    private async Task Handle(string? componentName, string? version)
     {
+        if (string.IsNullOrWhiteSpace(componentName))
+        {
+            _logger.LogError("Missing component name. " +
+                             $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
+                             $"{Constants.AspnetCoreRuntimeComponentName}, {Constants.SdkComponentName}. " +
+                             "Example: dotnet installer info sdk lts");
+            Environment.Exit(-1);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            _logger.LogError($"Missing version for component '{componentName}'. " +
+                             "Valid versions are: a major version (e.g. '8' or '8.0'), lts, latest. " +
+                             $"Example: dotnet installer info {componentName} lts");
+            Environment.Exit(-1);
+            return;
+        }
+
 #if INCLUDE_PRERELEASE
         const bool includePrerelease = true;
 #else
@@ -53,7 +76,8 @@ public class InfoCommand : Command
             if (component is null)
             {
                 _logger.LogError($"The requested component '{componentName} {version}' does not exist. " +
-                                 "Valid components are: runtime, aspnetcore-runtime, sdk. " +
+                                 $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
+                                 $"{Constants.AspnetCoreRuntimeComponentName}, {Constants.SdkComponentName}. " +
                                  "Example: dotnet installer info sdk lts");
                 Environment.Exit(-1);
             }
