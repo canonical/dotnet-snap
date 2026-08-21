@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 
 namespace Dotnet.Installer.Console.Commands;
@@ -58,7 +59,10 @@ public class InstallCommand : Command
 
                 if (requestedComponent is null)
                 {
-                    _logger.LogError($"The requested component {component} {version} does not exist.");
+                    _logger.LogError($"The requested component '{component} {version}' does not exist. " +
+                                    $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
+                                    $"{Constants.AspnetCoreRuntimeComponentName}, {Constants.SdkComponentName}. " +
+                                    "Example: dotnet installer install sdk lts");
                     Environment.Exit(-1);
                 }
 
