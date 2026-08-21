@@ -11,6 +11,7 @@ public interface IFileService
     void InstallSystemdPathUnit(string snapName);
     void UninstallSystemdPathUnit(string snapName);
     Task PlaceLinkageFile(string contentSnapName);
+    void RemoveLinkageFile(string contentSnapName);
     Task PlaceUnitsFile(string snapConfigDirLocation, string contentSnapName, string units);
     Task<string[]> ReadUnitsFile(string snapConfigDirLocation, string contentSnapName);
     void DeleteUnitsFile(string snapConfigDirLocation, string contentSnapName);
