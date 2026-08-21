@@ -54,6 +54,16 @@ public class InfoCommand : Command
             return;
         }
 
+        if (!IsValidComponentName(componentName))
+        {
+            _logger.LogError($"Invalid component name '{componentName}'. " +
+                             $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
+                             $"{Constants.AspnetCoreRuntimeComponentName}, {Constants.SdkComponentName}. " +
+                             "Example: dotnet installer info sdk lts");
+            Environment.Exit(-1);
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(version))
         {
             _logger.LogError($"Missing version for component '{componentName}'. " +
@@ -94,6 +104,13 @@ public class InfoCommand : Command
             _logger.LogError(ex.Message);
             Environment.Exit(-1);
         }
+    }
+
+    private static bool IsValidComponentName(string componentName)
+    {
+        return componentName.Equals(Constants.DotnetRuntimeComponentName, StringComparison.CurrentCultureIgnoreCase)
+               || componentName.Equals(Constants.AspnetCoreRuntimeComponentName, StringComparison.CurrentCultureIgnoreCase)
+               || componentName.Equals(Constants.SdkComponentName, StringComparison.CurrentCultureIgnoreCase);
     }
 
     private async Task<(DotnetVersion? Version, string Channel)> GetSnapInfo(string key, bool installed)
