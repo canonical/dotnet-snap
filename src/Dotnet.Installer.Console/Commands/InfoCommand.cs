@@ -85,10 +85,26 @@ public class InfoCommand : Command
             var component = _manifestService.MatchRemoteComponent(componentName, version);
             if (component is null)
             {
-                _logger.LogError($"The requested component '{componentName} {version}' does not exist. " +
-                                 $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
-                                 $"{Constants.AspnetCoreRuntimeComponentName}, {Constants.SdkComponentName}. " +
-                                 "Example: dotnet installer info sdk lts");
+                var availableVersions = _manifestService.Remote
+                    .Where(c => c.Name.Equals(componentName, StringComparison.CurrentCultureIgnoreCase))
+                    .Select(c => c.MajorVersion)
+                    .Distinct()
+                    .OrderByDescending(v => v)
+                    .ToList();
+
+                if (availableVersions.Count > 0)
+                {
+                    _logger.LogError($"The requested version '{version}' does not exist for component '{componentName}'. " +
+                                     $"Available versions are: {string.Join(", ", availableVersions)}. " +
+                                     $"Example: dotnet installer info {componentName} {availableVersions.First()}");
+                }
+                else
+                {
+                    _logger.LogError($"The requested component '{componentName} {version}' does not exist. " +
+                                     $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
+                                     $"{Constants.AspnetCoreRuntimeComponentName}, {Constants.SdkComponentName}. " +
+                                     "Example: dotnet installer info sdk lts");
+                }
                 Environment.Exit(-1);
             }
 
