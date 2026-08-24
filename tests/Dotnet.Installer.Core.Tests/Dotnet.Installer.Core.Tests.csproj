@@ -24,6 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Dotnet.Installer.Console\Dotnet.Installer.Console.csproj" />
       <ProjectReference Include="..\..\src\Dotnet.Installer.Core\Dotnet.Installer.Core.csproj" />
     </ItemGroup>
 

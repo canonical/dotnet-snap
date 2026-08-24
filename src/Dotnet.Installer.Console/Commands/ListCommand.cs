@@ -32,6 +32,20 @@ public class ListCommand : Command
                 IsRequired = false
             };
 
+        var installedOption = new Option<bool>(
+            name: "--installed",
+            description: "Show only installed components.")
+            {
+                IsRequired = false
+            };
+
+        var ltsOption = new Option<bool>(
+            name: "--lts",
+            description: "Show only LTS components.")
+            {
+                IsRequired = false
+            };
+
         var timeoutOption = new Option<uint>(
             name: "--timeout",
             description: "The timeout for requesting the version of a .NET component " +
@@ -42,12 +56,14 @@ public class ListCommand : Command
         };
 
         AddOption(includeUnsupportedOption);
+        AddOption(installedOption);
+        AddOption(ltsOption);
         AddOption(timeoutOption);
 
-        this.SetHandler(Handle, includeUnsupportedOption, timeoutOption);
+        this.SetHandler(Handle, includeUnsupportedOption, installedOption, ltsOption, timeoutOption);
     }
 
-    private async Task Handle(bool includeUnsupported, uint timeoutInMilliseconds)
+    private async Task Handle(bool includeUnsupported, bool installedOnly, bool ltsOnly, uint timeoutInMilliseconds)
     {
 #if INCLUDE_PRERELEASE
         const bool includePrerelease = true;
@@ -58,6 +74,25 @@ public class ListCommand : Command
         {
             await _manifestService.Initialize(includeUnsupported, includePrerelease);
 
+            var components = installedOnly
+                ? _manifestService.Local.ToList()
+                : _manifestService.Merged.ToList();
+
+            if (ltsOnly) components = components.Where(c => c.IsLts).ToList();
+
+            if (components.Count == 0)
+            {
+                var message = (installedOnly, ltsOnly) switch
+                {
+                    (true, true) => "You don't have any LTS .NET components installed. Run 'dotnet installer install sdk lts' to install the latest LTS SDK.",
+                    (true, false) => "You don't have any .NET components installed. Run 'dotnet installer install sdk lts' to install the latest LTS SDK.",
+                    (false, true) => "No LTS .NET components found.",
+                    _ => "No .NET components found."
+                };
+                AnsiConsole.WriteLine(message);
+                return;
+            }
+
             var table = new Table();
 
             table.AddColumn(new TableColumn("Version"));
@@ -66,7 +101,6 @@ public class ListCommand : Command
             table.AddColumn(new TableColumn("SDK"));
             table.AddColumn(new TableColumn("End of Life"));
 
-            var components = _manifestService.Merged.ToList();
             var componentVersions = await GetComponentVersions(components, timeoutInMilliseconds).ConfigureAwait(false);
 
             foreach (var majorVersionGroup in components
@@ -91,42 +125,13 @@ public class ListCommand : Command
                     var component = majorVersionGroup.FirstOrDefault(
                         c => c.Name == name && c.MajorVersion == majorVersionGroup.Key);
 
-                    if (component is null)
-                    {
-                        return "[grey]-[/]";
-                    }
-
-                    var status = component.IsInstalled ? "[green][bold]Installed[/]" : "[blue][bold]Available[/]";
-
-                    var version = componentVersions[component.Key];
-                    status += version is null ? "[/]" : $" [[{version}]][/]";
-
-                    return status;
+                    return component is null ? "[grey]-[/]" : OutputFormat.Status(component, componentVersions[component.Key]);
                 }
 
                 string EndOfLifeStatus()
                 {
-                    var endOfLife = majorVersionGroup.First().EndOfLife;
-
-                    if (endOfLife is null)
-                    {
-                        return "[grey]-[/]";
-                    }
-
-                    var daysUntilEndOfLife = (endOfLife.Value - DateTime.Now).TotalDays;
-
-                    var eolString = $"[{(daysUntilEndOfLife <= 0d ? "bold red" : "green")}]{endOfLife:d}[/]";
-
-                    if (majorVersionGroup.Any(c => c.IsInstalled) && daysUntilEndOfLife is < 30d and > 0d)
-                    {
-                        eolString += $" [bold yellow]({daysUntilEndOfLife:N0} days left)[/]";
-                    }
-                    else if (daysUntilEndOfLife is < 90d and > 0d)
-                    {
-                        eolString += $" ({daysUntilEndOfLife:N0} days left)";
-                    }
-
-                    return eolString;
+                    var component = majorVersionGroup.First();
+                    return OutputFormat.Eol(component, majorVersionGroup.Any(c => c.IsInstalled));
                 }
             }
 
