@@ -97,7 +97,7 @@ public class RemoveCommand : Command
                 await reverseDependency.Uninstall(_fileService, _manifestService, _snapService, _systemdService, _logger);
             }
         }
-        catch (ApplicationException ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex.Message);
             Environment.Exit(-1);
