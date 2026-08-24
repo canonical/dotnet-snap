@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using Dotnet.Installer.Core.Models;
 using Dotnet.Installer.Core.Services.Contracts;
 
 namespace Dotnet.Installer.Console.Commands;
@@ -58,7 +59,23 @@ public class InstallCommand : Command
 
                 if (requestedComponent is null)
                 {
-                    _logger.LogError($"The requested component {component} {version} does not exist.");
+                    if (Constants.IsValidComponentName(component))
+                    {
+                        var availableVersions = _manifestService.GetAvailableVersions(component);
+
+                        if (availableVersions.Count > 0)
+                        {
+                            _logger.LogError($"The requested version '{version}' does not exist for component '{component}'. " +
+                                             $"Available versions are: {string.Join(", ", availableVersions)}. " +
+                                             $"Example: dotnet installer install {component} {availableVersions.First()}");
+                            Environment.Exit(-1);
+                        }
+                    }
+
+                    _logger.LogError($"The requested component '{component} {version}' does not exist. " +
+                                    $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
+                                    $"{Constants.AspnetCoreRuntimeComponentName}, {Constants.SdkComponentName}. " +
+                                    "Example: dotnet installer install sdk lts");
                     Environment.Exit(-1);
                 }
 
@@ -75,7 +92,7 @@ public class InstallCommand : Command
             _logger.LogError($"The directory {_manifestService.DotnetInstallLocation} does not exist");
             Environment.Exit(-1);
         }
-        catch (ApplicationException ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex.Message);
             Environment.Exit(-1);
