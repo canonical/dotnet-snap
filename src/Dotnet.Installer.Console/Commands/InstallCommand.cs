@@ -79,7 +79,7 @@ public class InstallCommand : Command
             _logger.LogError($"The directory {_manifestService.DotnetInstallLocation} does not exist");
             Environment.Exit(-1);
         }
-        catch (ApplicationException ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex.Message);
             Environment.Exit(-1);

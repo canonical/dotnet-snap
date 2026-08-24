@@ -27,7 +27,7 @@ need_elevation_commands=("install" "remove")
 
 # shellcheck disable=SC2076
 # shellcheck disable=SC2199
-if [[ $# -gt 1 && " ${need_elevation_commands[@]} " =~ " ${1} " ]]; then
+if [[ $# -ge 1 && " ${need_elevation_commands[@]} " =~ " ${1} " ]]; then
     run_elevated "$debug" "${command_to_execute[@]}"
 else
     "${command_to_execute[@]}"
