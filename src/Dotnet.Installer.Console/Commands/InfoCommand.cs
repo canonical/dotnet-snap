@@ -54,7 +54,7 @@ public class InfoCommand : Command
             return;
         }
 
-        if (!IsValidComponentName(componentName))
+        if (!Constants.IsValidComponentName(componentName))
         {
             _logger.LogError($"Invalid component name '{componentName}'. " +
                              $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
@@ -85,12 +85,7 @@ public class InfoCommand : Command
             var component = _manifestService.MatchRemoteComponent(componentName, version);
             if (component is null)
             {
-                var availableVersions = _manifestService.Remote
-                    .Where(c => c.Name.Equals(componentName, StringComparison.CurrentCultureIgnoreCase))
-                    .Select(c => c.MajorVersion)
-                    .Distinct()
-                    .OrderByDescending(v => v)
-                    .ToList();
+                var availableVersions = _manifestService.GetAvailableVersions(componentName);
 
                 if (availableVersions.Count > 0)
                 {
@@ -120,13 +115,6 @@ public class InfoCommand : Command
             _logger.LogError(ex.Message);
             Environment.Exit(-1);
         }
-    }
-
-    private static bool IsValidComponentName(string componentName)
-    {
-        return componentName.Equals(Constants.DotnetRuntimeComponentName, StringComparison.CurrentCultureIgnoreCase)
-               || componentName.Equals(Constants.AspnetCoreRuntimeComponentName, StringComparison.CurrentCultureIgnoreCase)
-               || componentName.Equals(Constants.SdkComponentName, StringComparison.CurrentCultureIgnoreCase);
     }
 
     private async Task<(DotnetVersion? Version, string Channel)> GetSnapInfo(string key, bool installed)

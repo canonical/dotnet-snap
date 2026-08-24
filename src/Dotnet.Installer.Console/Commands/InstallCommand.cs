@@ -59,6 +59,19 @@ public class InstallCommand : Command
 
                 if (requestedComponent is null)
                 {
+                    if (Constants.IsValidComponentName(component))
+                    {
+                        var availableVersions = _manifestService.GetAvailableVersions(component);
+
+                        if (availableVersions.Count > 0)
+                        {
+                            _logger.LogError($"The requested version '{version}' does not exist for component '{component}'. " +
+                                             $"Available versions are: {string.Join(", ", availableVersions)}. " +
+                                             $"Example: dotnet installer install {component} {availableVersions.First()}");
+                            Environment.Exit(-1);
+                        }
+                    }
+
                     _logger.LogError($"The requested component '{component} {version}' does not exist. " +
                                     $"Valid components are: {Constants.DotnetRuntimeComponentName}, " +
                                     $"{Constants.AspnetCoreRuntimeComponentName}, {Constants.SdkComponentName}. " +
