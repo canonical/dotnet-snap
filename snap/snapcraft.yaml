@@ -30,7 +30,7 @@ parts:
     plugin: dump
     source: .
     build-packages:
-      - dotnet-sdk-10.0
+      - dotnet-sdk-11.0
       - patchelf
     stage-packages:
       - jq
@@ -78,7 +78,7 @@ parts:
     build-packages:
       - patchelf
     stage-packages:
-      - dotnet-hostfxr-10.0
+      - dotnet-hostfxr-11.0
     override-build: |
       DOTNET_VERSION=$(craftctl get version)
       INTERPRETER=$(find /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR} -type f -name ld-linux** | head -n 1)
